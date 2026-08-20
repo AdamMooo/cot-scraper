@@ -1,0 +1,9 @@
+.venv/
+__pycache__/
+build/
+dist/
+*.spec
+
+# What the app itself writes when you run it from the project folder.
+App Files/
+Fund Documents/

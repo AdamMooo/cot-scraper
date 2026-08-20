@@ -1,0 +1,7 @@
+requests==2.34.2
+
+# Build-only. Neither is imported by the shipped app: pyinstaller packages it,
+# and Pillow only runs in generate_icon.py to redraw app_icon.ico. build_exe.py
+# passes --exclude-module PIL so Pillow can never end up inside the .exe.
+pyinstaller==6.21.0
+Pillow==12.1.0
