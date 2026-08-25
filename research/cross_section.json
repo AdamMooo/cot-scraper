@@ -1,0 +1,65 @@
+{
+  "generated": "2026-08-25",
+  "entry_lag_weeks": 1,
+  "robustness": [
+    {
+      "spec": "Quintiles instead of terciles",
+      "why": "a monotonic signal should sharpen, not blur, under a more extreme sort",
+      "weeks": 1348,
+      "mean_weekly_spread": 0.0010949278224121688,
+      "annualised": 0.05693624676543278,
+      "p_value": 0.1736
+    },
+    {
+      "spec": "Weekly returns clipped at +/-10%",
+      "why": "tests whether a few large moves carry the result",
+      "weeks": 1348,
+      "mean_weekly_spread": 0.0009743735016401223,
+      "annualised": 0.05066742208528636,
+      "p_value": 0.0566
+    },
+    {
+      "spec": "Weekly returns clipped at +/-5%",
+      "why": "same, more aggressively",
+      "weeks": 1348,
+      "mean_weekly_spread": 0.00035408747252125845,
+      "annualised": 0.018412548571105438,
+      "p_value": 0.3806
+    },
+    {
+      "spec": "First half (2000-03 to 2013-01)",
+      "why": "out-of-sample stability",
+      "weeks": 674,
+      "mean_weekly_spread": 0.001100985251145923,
+      "annualised": 0.05725123305958799,
+      "p_value": 0.1866
+    },
+    {
+      "spec": "Second half (2013-01 to 2025-12)",
+      "why": "out-of-sample stability",
+      "weeks": 674,
+      "mean_weekly_spread": 0.001162746456358889,
+      "annualised": 0.06046281573066222,
+      "p_value": 0.1396
+    }
+  ],
+  "robustness_specs_significant": 0,
+  "robustness_specs_total": 5,
+  "verdict": "fragile",
+  "question": "Do the least-crowded commodities outperform the most-crowded, week to week?",
+  "portfolio": "equal-weighted terciles, long lowest positioning percentile, short highest",
+  "hold_weeks": 1,
+  "weeks": 1348,
+  "first_week": "2000-03-07",
+  "last_week": "2025-12-23",
+  "avg_commodities_per_week": 23.181008902077153,
+  "mean_weekly_spread": 0.001131865853752406,
+  "ci95_low": 5.494525691049269e-05,
+  "ci95_high": 0.0022670199292660676,
+  "p_value_block_bootstrap": 0.0472,
+  "positive_weeks_pct": 50.37091988130564,
+  "annualised_spread": 0.05885702439512511,
+  "annualised_vol": 0.17973711917580032,
+  "sharpe_like": 0.3274617099963488,
+  "caveat": "price-only returns, excludes roll yield and costs; measures information, not tradability"
+}

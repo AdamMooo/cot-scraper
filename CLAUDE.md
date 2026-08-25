@@ -84,7 +84,8 @@ files, same as the base kit's own design intent:
 | `downloader.py` | `_download_and_extract_zip` (unzips a historical year and saves its one `.txt` member), `_DOC_NAMES`/`_ACRONYMS` emptied (doc keys are plain year strings, no mapping needed). Skip-if-exists only applies to `extract: True` (historical, immutable) entries -- the current year's file is always re-fetched and overwritten, since it's CFTC's continuously-updated feed, not a static document |
 | `contracts.py` | The 24-commodity universe, each as a **chain** of CFTC names. CFTC renames contracts when exchanges merge or specs change, and treating each name as its own market shattered 40-year histories into fragments: copper read as 205 weeks instead of 1,898, cocoa was split 6 ways, and crude was being read off a secondary ICE listing while priced against NYMEX. Deliberately excludes co-trading contracts (CORN MidAmerica alongside CBOT) and size variants (MICRO GOLD alongside GOLD), which would double-count |
 | `prices.py` | Weekly closes from Yahoo's public chart endpoint. Two traps found by testing: `range=max` silently returns **monthly** bars, so explicit `period1`/`period2` epochs are required; and history starts mid-2000, which caps any price-linked study at ~26 years even though positioning goes back to 1986. Cached to `.cot-cache/prices/` |
-| `study.py` | The forward-return study. Offline research step, not part of the weekly job. See "The empirical finding" below before touching it |
+| `study.py` | Time-series forward-return study. Offline research step, not part of the weekly job. See "The empirical finding" below before touching it |
+| `cross_section.py` | Cross-sectional test: rank all commodities against each other weekly, long least-crowded vs short most-crowded. Exists because the time-series test is sample-starved (8 episodes per commodity); this gets 1,348 portfolio-weeks. Result is nominally significant but fails every robustness check, so also not a finding |
 
 ## Weekly automation
 
@@ -213,11 +214,51 @@ null into a false positive:
    crowd together (grains as a bloc) and same-quarter episodes are not
    independent draws.
 
+### The cross-sectional attempt, and why it is also not a finding
+
+`cross_section.py` was the follow-up: rank all 24 commodities against each
+other weekly, long the least-crowded tercile, short the most-crowded, which
+raises the observation count from ~8 episodes per commodity to **1,348
+portfolio-weeks**. That is the version of this question with real statistical
+power, and it is how the commodity factor literature tests positioning.
+
+Baseline result looks like something: +0.113% per week, +5.9% annualised,
+p=0.047. **It does not survive contact with the robustness table**, and the
+table is the point:
+
+| Check | p | Why it matters |
+|---|---|---|
+| Quintiles instead of terciles | 0.174 | a real monotonic signal should *sharpen* under a more extreme sort, not weaken |
+| Returns clipped at +/-5%/wk | 0.381 | the effect mostly lives in large weekly moves |
+| First half alone | 0.187 | neither half stands on its own |
+| Second half alone | 0.140 | " |
+
+0 of 5 robustness specs clear p<0.05. So the verdict is "nominally
+significant, fragile, not established". The one genuinely encouraging feature
+is that the magnitude is stable across halves (+5.7% vs +6.0% annualised),
+which is what a small real effect starved of power would also look like.
+
+Two corrections found here are worth not re-breaking:
+
+- **Entry lag.** CFTC data is as-of Tuesday, published Friday. Forming a
+  portfolio on the as-of date and holding Tuesday-to-Tuesday trades three of
+  seven days on unpublished information. `_ENTRY_LAG_WEEKS = 1` fixes it, and
+  it cost a quarter of the raw effect (p 0.006 -> 0.046). Do not "simplify"
+  this away.
+- **Yahoo's continuous series is not roll-adjusted.** Every roll injects a
+  price gap that is not a real return, and because term structure correlates
+  with positioning, those gaps do not wash out at random. Given the effect
+  collapses when returns are clipped, this is the leading candidate
+  explanation for whatever is left. Resolving it needs a roll-aware return
+  series and is the highest-value next step before any further modelling.
+
 Extending this properly: the Disaggregated report separates Managed Money
 from Producer/Merchant and Swap Dealers, which is a cleaner speculation proxy
 than the legacy non-commercial bucket (CFTC split the report in 2009 for that
 reason). Testing Managed Money positioning on 2009-present is the obvious
-next experiment, at the cost of a much shorter history.
+next experiment, at the cost of a much shorter history. Do it inside the
+cross-sectional framing, not the time-series one, or the sample will be too
+small to say anything.
 
 ## Do Not Touch
 
