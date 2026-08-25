@@ -1,53 +1,53 @@
-# COT Weekly Report - Legacy Report (Futures Only)
+# COT Weekly, report as of 2026-08-18
 
-Report as of 2026-08-18, generated 2026-08-25. 26 benchmark commodities tracked.
+24 commodities tracked. 9 at a positioning extreme (4 crowded long, 5 crowded short).
 
-## Key takeaways
+Week over week changes and price moves are not shown yet: only one weekly snapshot has accumulated so far, so there is no prior report to compare against. These fill in from the next run onward.
 
-**12 of 26** tracked commodities are at a positioning extreme this week (top or bottom decile of their own history): 4 crowded long, 8 crowded short.
+## Crowded long
 
-- **COPPER- #1** sits at the 100th percentile of its own history (crowded long), but there's no prior-week data yet to say whether that's a new move or already been the case a while.
-- **SOYBEAN MEAL** sits at the 97th percentile of its own history (crowded long), but there's no prior-week data yet to say whether that's a new move or already been the case a while.
-- **COTTON NO. 2** sits at the 97th percentile of its own history (crowded long), but there's no prior-week data yet to say whether that's a new move or already been the case a while.
-- **SOYBEAN OIL** sits at the 96th percentile of its own history (crowded long), but there's no prior-week data yet to say whether that's a new move or already been the case a while.
-- **COCOA** sits at the 10th percentile of its own history (crowded short), but there's no prior-week data yet to say whether that's a new move or already been the case a while.
-- **PALLADIUM** sits at the 7th percentile of its own history (crowded short), but there's no prior-week data yet to say whether that's a new move or already been the case a while.
-- **MICRO GOLD** sits at the 6th percentile of its own history (crowded short), but there's no prior-week data yet to say whether that's a new move or already been the case a while.
-- **CRUDE OIL, LIGHT SWEET-WTI** sits at the 4th percentile of its own history (crowded short), but there's no prior-week data yet to say whether that's a new move or already been the case a while.
-- **FEEDER CATTLE** sits at the 3rd percentile of its own history (crowded short), but there's no prior-week data yet to say whether that's a new move or already been the case a while.
-- **NAT GAS NYME** sits at the 0th percentile of its own history (crowded short), but there's no prior-week data yet to say whether that's a new move or already been the case a while.
-- **MILK, Class III** sits at the 0th percentile of its own history (crowded short), but there's no prior-week data yet to say whether that's a new move or already been the case a while.
-- **LEAN HOGS** sits at the 0th percentile of its own history (crowded short), but there's no prior-week data yet to say whether that's a new move or already been the case a while.
+- **Copper**: 100th pct of 1,898wk
+- **Cotton**: 98th pct of 1,897wk
+- **Soybean Meal**: 97th pct of 1,899wk
+- **Soybean Oil**: 96th pct of 1,899wk
 
-## Full data
+## Crowded short
 
-Percentile is versus each market's own full available history; higher means a more crowded net-long speculative position. Price change covers the same week as the position change.
+- **Lean Hogs**: 0th pct of 1,899wk
+- **Class III Milk**: 0th pct of 1,471wk
+- **Feeder Cattle**: 3rd pct of 1,899wk
+- **Natural Gas**: 5th pct of 1,795wk
+- **Palladium**: 7th pct of 1,824wk
 
-| Market | As of | Net Non-Commercial | Change vs prior report | Percentile vs history | Price change (same week) |
-|---|---|---|---|---|---|
-| COPPER- #1 - COMMODITY EXCHANGE INC. | 2026-08-18 | +79,748 | n/a (no prior week yet) | 100th | n/a |
-| SOYBEAN MEAL - CHICAGO BOARD OF TRADE | 2026-08-18 | +116,897 | n/a (no prior week yet) | 97th | n/a |
-| COTTON NO. 2 - ICE FUTURES U.S. | 2026-08-18 | +107,648 | n/a (no prior week yet) | 97th | n/a |
-| SOYBEAN OIL - CHICAGO BOARD OF TRADE | 2026-08-18 | +104,242 | n/a (no prior week yet) | 96th | n/a |
-| SOYBEANS - CHICAGO BOARD OF TRADE | 2026-08-18 | +190,961 | n/a (no prior week yet) | 88th | n/a |
-| GOLD - COMMODITY EXCHANGE INC. | 2026-08-18 | +222,189 | n/a (no prior week yet) | 88th | n/a |
-| HENRY HUB - NEW YORK MERCANTILE EXCHANGE | 2026-08-18 | +259,621 | n/a (no prior week yet) | 84th | n/a |
-| CORN - CHICAGO BOARD OF TRADE | 2026-08-18 | +302,142 | n/a (no prior week yet) | 83rd | n/a |
-| GASOLINE RBOB - NEW YORK MERCANTILE EXCHANGE | 2026-08-18 | +57,844 | n/a (no prior week yet) | 72nd | n/a |
-| WHEAT-HRW - CHICAGO BOARD OF TRADE | 2026-08-18 | +16,074 | n/a (no prior week yet) | 68th | n/a |
-| LIVE CATTLE - CHICAGO MERCANTILE EXCHANGE | 2026-08-18 | +39,584 | n/a (no prior week yet) | 67th | n/a |
-| PLATINUM - NEW YORK MERCANTILE EXCHANGE | 2026-08-18 | +13,039 | n/a (no prior week yet) | 64th | n/a |
-| ROUGH RICE - CHICAGO BOARD OF TRADE | 2026-08-18 | +605 | n/a (no prior week yet) | 61st | n/a |
-| COFFEE C - ICE FUTURES U.S. | 2026-08-18 | +30,365 | n/a (no prior week yet) | 59th | n/a |
-| WHEAT-SRW - CHICAGO BOARD OF TRADE | 2026-08-18 | -18,765 | n/a (no prior week yet) | 53rd | n/a |
-| NY HARBOR ULSD - NEW YORK MERCANTILE EXCHANGE | 2026-08-18 | +13,879 | n/a (no prior week yet) | 46th | n/a |
-| SILVER - COMMODITY EXCHANGE INC. | 2026-08-18 | +23,625 | n/a (no prior week yet) | 46th | n/a |
-| SUGAR NO. 11 - ICE FUTURES U.S. | 2026-08-18 | +77,952 | n/a (no prior week yet) | 43rd | n/a |
-| COCOA - ICE FUTURES U.S. | 2026-08-18 | -5,725 | n/a (no prior week yet) | 10th | n/a |
-| PALLADIUM - NEW YORK MERCANTILE EXCHANGE | 2026-08-18 | -4,398 | n/a (no prior week yet) | 7th | n/a |
-| MICRO GOLD - COMMODITY EXCHANGE INC. | 2026-08-18 | -19,291 | n/a (no prior week yet) | 6th | n/a |
-| CRUDE OIL, LIGHT SWEET-WTI - ICE FUTURES EUROPE | 2026-08-18 | -17,451 | n/a (no prior week yet) | 4th | n/a |
-| FEEDER CATTLE - CHICAGO MERCANTILE EXCHANGE | 2026-08-18 | -4,131 | n/a (no prior week yet) | 3rd | n/a |
-| NAT GAS NYME - NEW YORK MERCANTILE EXCHANGE | 2026-08-18 | -203,503 | n/a (no prior week yet) | 0th | n/a |
-| MILK, Class III - CHICAGO MERCANTILE EXCHANGE | 2026-08-18 | -8,965 | n/a (no prior week yet) | 0th | n/a |
-| LEAN HOGS - CHICAGO MERCANTILE EXCHANGE | 2026-08-18 | -62,655 | n/a (no prior week yet) | 0th | n/a |
+## All commodities
+
+| Commodity | Sector | Net position | vs prior wk | Percentile | History | Price (wk) |
+|---|---|---|---|---|---|---|
+| Copper | Metals | +79,748 | n/a | 100th | 1,898wk | n/a |
+| Cotton | Softs | +107,648 | n/a | 98th | 1,897wk | n/a |
+| Soybean Meal | Grains | +116,897 | n/a | 97th | 1,899wk | n/a |
+| Soybean Oil | Grains | +104,242 | n/a | 96th | 1,899wk | n/a |
+| Soybeans | Grains | +190,961 | n/a | 88th | 1,899wk | n/a |
+| Gold | Metals | +222,189 | n/a | 88th | 1,898wk | n/a |
+| Corn | Grains | +302,142 | n/a | 83rd | 1,899wk | n/a |
+| Coffee | Softs | +30,365 | n/a | 79th | 1,893wk | n/a |
+| RBOB Gasoline | Energy | +57,844 | n/a | 74th | 1,897wk | n/a |
+| Sugar | Softs | +77,952 | n/a | 69th | 1,893wk | n/a |
+| NY Harbor ULSD | Energy | +13,879 | n/a | 68th | 1,896wk | n/a |
+| Wheat (HRW) | Grains | +16,074 | n/a | 68th | 1,899wk | n/a |
+| Live Cattle | Livestock | +39,584 | n/a | 67th | 1,899wk | n/a |
+| Rough Rice | Grains | +605 | n/a | 66th | 1,861wk | n/a |
+| Platinum | Metals | +13,039 | n/a | 64th | 1,898wk | n/a |
+| WTI Crude | Energy | +122,090 | n/a | 59th | 1,897wk | n/a |
+| Silver | Metals | +23,625 | n/a | 46th | 1,898wk | n/a |
+| Wheat (SRW) | Grains | -18,765 | n/a | 32nd | 1,899wk | n/a |
+| Cocoa | Softs | -5,725 | n/a | 17th | 1,896wk | n/a |
+| Palladium | Metals | -4,398 | n/a | 7th | 1,824wk | n/a |
+| Natural Gas | Energy | -203,503 | n/a | 5th | 1,795wk | n/a |
+| Feeder Cattle | Livestock | -4,131 | n/a | 3rd | 1,899wk | n/a |
+| Class III Milk | Livestock | -8,965 | n/a | 0th | 1,471wk | n/a |
+| Lean Hogs | Livestock | -62,655 | n/a | 0th | 1,899wk | n/a |
+
+---
+
+Positioning extremes are context, not forecasts. Across 178 historical episodes in 79 distinct quarters, forward returns after a crowded reading were indistinguishable from chance (mean reversion hit rate 42-56%, best p=0.26). See research/FINDINGS.md.

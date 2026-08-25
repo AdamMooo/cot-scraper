@@ -1,110 +1,101 @@
 """
-Weekly futures price, from Yahoo Finance's public (unofficial, no API key)
-chart endpoint. This exists so the report can show what price actually did
-over the same week a positioning change covers -- comparing the two is the
-actual point of this tool, not positioning in isolation.
+Weekly futures prices from Yahoo Finance's public chart endpoint (no API key).
 
-MARKET_TICKERS is deliberately an allow-list, not a filter applied after the
-fact: only base commodity names with a stable, liquid, publicly quoted
-futures ticker are in it, matched against the market name's portion before
-" - <exchange>". Everything CFTC lists that isn't a recognizable benchmark
-commodity (rates, FX, equity indices, crypto, thin basis/power/RIN/REC
-contracts) is simply absent, which is what keeps the weekly report to
-markets worth reading about instead of CFTC's full ~370-line universe.
-Verified against Yahoo on 2026-08-25; a ticker that stops resolving just
-drops that one market from price comparison (see price_change), it doesn't
-break the run.
+Two traps worth knowing, both found by testing rather than assumed:
+
+  - `range=max` with `interval=1wk` silently returns MONTHLY bars (267 bars
+    for 26 years). Explicit `period1`/`period2` epochs are required to get
+    real weekly data (1,362 bars for the same span).
+  - History starts mid-2000 for these continuous contracts, not 1986. So
+    while positioning goes back 40 years, any price-linked study is capped
+    at ~26 years. That is the binding constraint on the forward-return work
+    and it is reported rather than hidden.
+
+Series are cached to .cot-cache/prices/ because the study re-runs often and
+there is no reason to re-hit Yahoo for history that cannot change.
 
 Public interface:
-    MARKET_TICKERS      -- {base market name: Yahoo Finance ticker}
-    ticker_for(market)   -> ticker | None
-    daily_closes(ticker) -> {date_str: close}
-    price_change(closes, as_of, prior_as_of) -> (latest_close, pct_change) | None
+    weekly_closes(ticker)        -> [(iso_date, close)] ascending
+    close_asof(series, date)     -> close on/just before date, or None
+    pct_change(series, d0, d1)   -> fractional change between two dates
 """
 
+import bisect
+import json
+import time
 from datetime import date, datetime, timedelta, timezone
 
 from http_client import get_session
+from paths import support_dir
 
-MARKET_TICKERS: dict[str, str] = {
-    "CORN": "ZC=F",
-    "SOYBEANS": "ZS=F",
-    "SOYBEAN MEAL": "ZM=F",
-    "SOYBEAN OIL": "ZL=F",
-    "WHEAT-SRW": "ZW=F",
-    "WHEAT-HRW": "KE=F",
-    "ROUGH RICE": "ZR=F",
-    "COTTON NO. 2": "CT=F",
-    "SUGAR NO. 11": "SB=F",
-    "COCOA": "CC=F",
-    "COFFEE C": "KC=F",
-    "LEAN HOGS": "HE=F",
-    "LIVE CATTLE": "LE=F",
-    "FEEDER CATTLE": "GF=F",
-    "CRUDE OIL, LIGHT SWEET-WTI": "CL=F",
-    "NAT GAS NYME": "NG=F",
-    "HENRY HUB": "NG=F",
-    "GASOLINE RBOB": "RB=F",
-    "NY HARBOR ULSD": "HO=F",
-    "GOLD": "GC=F",
-    "MICRO GOLD": "GC=F",
-    "SILVER": "SI=F",
-    "COPPER- #1": "HG=F",
-    "PLATINUM": "PL=F",
-    "PALLADIUM": "PA=F",
-    "MILK, Class III": "DC=F",
-}
+_EPOCH_START = int(datetime(1995, 1, 1, tzinfo=timezone.utc).timestamp())
+# COT dates are Tuesdays and nearly always trading days, but a holiday or a
+# thin week can leave no close exactly on the date, so a short look-back is
+# allowed. Wider than this and we would be silently comparing stale prices.
+_MAX_STALE_DAYS = 7
 
 
-def ticker_for(market: str) -> str | None:
-    """market is the full CFTC name, e.g. "CORN - CHICAGO BOARD OF TRADE"."""
-    base = market.rsplit(" - ", 1)[0]
-    return MARKET_TICKERS.get(base)
+def _cache_dir():
+    d = support_dir().parent / ".cot-cache" / "prices"
+    d.mkdir(parents=True, exist_ok=True)
+    return d
 
 
-def daily_closes(ticker: str, days: int = 120) -> dict[str, float]:
-    """Return {ISO date: close} for the last `days` calendar days, empty on failure."""
+def weekly_closes(ticker: str, use_cache: bool = True) -> list[tuple[str, float]]:
+    """Full weekly close history for a ticker, ascending by date."""
+    cache_file = _cache_dir() / f"{ticker.replace('=', '_')}.json"
+    if use_cache and cache_file.exists():
+        try:
+            return [(d, c) for d, c in json.loads(cache_file.read_text())]
+        except (OSError, ValueError):
+            pass
+
+    period2 = int((datetime.now(timezone.utc) + timedelta(days=1)).timestamp())
     try:
         resp = get_session().get(
             f"https://query1.finance.yahoo.com/v8/finance/chart/{ticker}",
-            params={"range": f"{days}d" if days <= 60 else "6mo", "interval": "1d"},
-            timeout=30,
+            params={"period1": _EPOCH_START, "period2": period2, "interval": "1wk"},
+            timeout=45,
         )
         resp.raise_for_status()
         result = resp.json()["chart"]["result"][0]
-        timestamps = result["timestamp"]
+        stamps = result["timestamp"]
         closes = result["indicators"]["quote"][0]["close"]
     except Exception:
-        return {}
+        return []
 
-    out: dict[str, float] = {}
-    for ts, close in zip(timestamps, closes):
-        if close is None:
-            continue
-        day = datetime.fromtimestamp(ts, tz=timezone.utc).date().isoformat()
-        out[day] = close
-    return out
+    series = [
+        (datetime.fromtimestamp(ts, timezone.utc).date().isoformat(), float(c))
+        for ts, c in zip(stamps, closes)
+        if c is not None
+    ]
+    series.sort()
+    try:
+        cache_file.write_text(json.dumps(series))
+    except OSError:
+        pass
+    time.sleep(0.3)  # be polite to an endpoint that owes us nothing
+    return series
 
 
-def price_change(closes: dict[str, float], as_of: str, prior_as_of: str) -> tuple[float, float] | None:
-    """Latest close at/before as_of, and its % change from the close at/before prior_as_of.
-
-    COT as_of dates are Tuesdays and almost always trading days, but a
-    market holiday can shift things by a day, so this looks back up to a
-    week for the nearest available close rather than requiring an exact
-    date match.
-    """
-    latest = _closest_close(closes, as_of)
-    prior = _closest_close(closes, prior_as_of)
-    if latest is None or prior is None or prior == 0:
+def close_asof(series: list[tuple[str, float]], target: str) -> float | None:
+    """Close on `target`, else the most recent close within _MAX_STALE_DAYS."""
+    if not series:
         return None
-    return latest, (latest - prior) / prior * 100
+    dates = [d for d, _ in series]
+    i = bisect.bisect_right(dates, target) - 1
+    if i < 0:
+        return None
+    found, close = series[i]
+    if (date.fromisoformat(target) - date.fromisoformat(found)).days > _MAX_STALE_DAYS:
+        return None
+    return close
 
 
-def _closest_close(closes: dict[str, float], target: str) -> float | None:
-    target_date = date.fromisoformat(target)
-    for back in range(8):
-        day = (target_date - timedelta(days=back)).isoformat()
-        if day in closes:
-            return closes[day]
-    return None
+def pct_change(series: list[tuple[str, float]], start: str, end: str) -> float | None:
+    """Fractional price change between two dates, or None if either is unavailable."""
+    a = close_asof(series, start)
+    b = close_asof(series, end)
+    if a is None or b is None or a == 0:
+        return None
+    return (b - a) / a

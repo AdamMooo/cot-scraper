@@ -1,23 +1,18 @@
 """
-Positioning + price analysis for the Legacy Report (Futures Only) COT file.
+Reads the Legacy (Futures Only) COT file and builds the weekly report.
 
-Scope is deliberately narrow for v1: one report (Legacy, Futures Only), one
-positioning metric (net non-commercial position, its percentile rank
-against that market's own history, and its change from the prior report),
-compared against what price actually did over the same week
-(prices.py). Comparing the two -- not positioning in isolation -- is the
-actual point: "is speculative positioning stretched, and did price move
-with or against that stretch" is the question a COT reader is usually
-asking.
+The universe is contracts.COMMODITIES -- 24 benchmark commodities, each
+defined as a *chain* of CFTC names so a 40-year history survives the
+exchange renames that would otherwise shatter it (see contracts.py; this
+was a real bug that made copper's 33-year history read as 205 weeks).
 
-Which markets get analyzed at all is driven by prices.MARKET_TICKERS, an
-allow-list of benchmark commodities with a real price series, rather than a
-list of things to exclude. Earlier attempts at excluding non-commodities by
-keyword/exchange kept missing cases (rates, FX, equity indices, crypto, and
-~150 thin ICE Futures Energy Div / Nodal Exchange power-grid and
-pipeline-basis contracts all dominated the extremes before this); requiring
-a real ticker is what actually pins the report to "the commodity market"
-and is also what makes the price comparison possible at all.
+The report is deliberately descriptive. An earlier version asserted that
+crowded positioning "could unwind sharply", which sounds like analysis but
+is unfalsifiable. study.py went and measured it across 185 pooled
+historical episodes in 87 distinct quarters: forward returns after a
+crowded reading are indistinguishable from chance (reversion hit rates
+42-56%, no p-value below 0.26). So this report states what positioning is
+and what price did, cites that finding in a footer, and does not forecast.
 
 Column positions below are the Legacy "Futures Only" long-format layout,
 confirmed from a historical year's own header row (every extracted archive
@@ -26,15 +21,18 @@ column order) and from CFTC's published variable list at
 HistoricalViewable/cotvariableslegacy.html.
 
 Public interface:
-    load_category_rows(category_dir) -> {market_name: [(as_of, net_noncommercial, open_interest), ...]}
-    build_report(by_market) -> markdown str
+    load_category_rows(category_dir)                     -> {market: [(as_of, net, open_interest)]}
+    merge_current_year_snapshot(snapshot, accumulator)    -- accumulate weekly snapshots
+    build_report(by_market)                              -> markdown str
 """
 
 import csv
+import json
 from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
 
+import contracts
 import prices
 
 _MARKET_COL = 0
@@ -122,161 +120,137 @@ def merge_current_year_snapshot(snapshot_file: Path, accumulator_file: Path) -> 
 _MAX_PLAUSIBLE_GAP_DAYS = 10
 
 
-def _percentile_rank(history_values: list[int], latest: int) -> float:
-    """Where the latest value sits versus its own market's full history, 0-100."""
-    at_or_below = sum(1 for v in history_values if v <= latest)
-    return 100 * at_or_below / len(history_values)
-
-
-# A market in the top or bottom decile of its own history is "crowded" --
-# stretched enough to be worth naming, not just a data point in the table.
+# Top/bottom decile of a commodity's own positioning history. The label is
+# descriptive only: study.py measured what actually follows these readings
+# across 185 pooled historical episodes and found forward returns
+# indistinguishable from chance (reversion hit rates 42-56%). So the report
+# says what positioning IS, never what price will do.
 _EXTREME_HIGH = 90
 _EXTREME_LOW = 10
+_RESEARCH_FILE = Path(__file__).resolve().parent / "research" / "forward_returns.json"
 
 
 def _ordinal(n: float) -> str:
     i = round(n)
-    if 11 <= i % 100 <= 13:
-        suffix = "th"
-    else:
-        suffix = {1: "st", 2: "nd", 3: "rd"}.get(i % 10, "th")
+    suffix = "th" if 11 <= i % 100 <= 13 else {1: "st", 2: "nd", 3: "rd"}.get(i % 10, "th")
     return f"{i}{suffix}"
 
 
 @dataclass
-class MarketRow:
-    market: str  # full CFTC name, "CORN - CHICAGO BOARD OF TRADE"
+class Reading:
+    name: str
+    sector: str
     as_of: str
     net: int
-    change: int | None  # contracts vs. prior report; None if no real prior week yet
-    pct: float  # percentile of `net` vs. this market's own full history
-    price_move: tuple[float, float] | None  # (latest close, % change); None if unavailable
-
-    @property
-    def name(self) -> str:
-        return self.market.rsplit(" - ", 1)[0]
+    weeks: int  # depth of the stitched history behind the percentile
+    pct: float
+    change: int | None  # vs prior report; None when no true prior week on file
+    price_pct: float | None  # same-week price move, fraction
 
 
-def _collect_rows(by_market: MarketHistory) -> list[MarketRow]:
-    """One MarketRow per currently-active, ticker-mapped, benchmark commodity.
+def _collect(by_market: MarketHistory) -> list[Reading]:
+    """One Reading per commodity, using stitched rename chains.
 
-    Only markets with a ticker in prices.MARKET_TICKERS are included (see
-    module docstring for why). A market that stopped being reported decades
-    ago would otherwise trivially rank "100th percentile" against its own
-    short, ancient history, so only markets reported as of the most recent
-    date anyone has are considered active.
+    The percentile is computed against the commodity's full stitched history
+    (~1,900 weeks for most), which is the whole reason contracts.py exists:
+    unstitched, copper's history looked like 205 weeks and every reading
+    scored as an all-time extreme.
     """
-    latest_overall = max((h[-1][0] for h in by_market.values() if h), default=None)
-
-    price_cache: dict[str, dict[str, float]] = {}
-    rows = []
-    for market, history in by_market.items():
-        ticker = prices.ticker_for(market)
-        if ticker is None or len(history) < 2 or history[-1][0] != latest_overall:
+    out = []
+    for name, commodity in contracts.COMMODITIES.items():
+        series = contracts.stitch(by_market, commodity)
+        if len(series) < 2:
             continue
+        nets = [n for _, n in series]
+        as_of, net = series[-1]
+        prior_date, prior_net = series[-2]
 
-        nets = [h[1] for h in history]
-        latest_date, latest_net, _latest_oi = history[-1]
-        prior_date, prev_net, _prev_oi = history[-2]
+        gap = (date.fromisoformat(as_of) - date.fromisoformat(prior_date)).days
+        has_prior = gap <= _MAX_PLAUSIBLE_GAP_DAYS
+        change = net - prior_net if has_prior else None
 
-        gap_days = (date.fromisoformat(latest_date) - date.fromisoformat(prior_date)).days
-        has_prior_week = gap_days <= _MAX_PLAUSIBLE_GAP_DAYS
+        price_pct = None
+        if has_prior:
+            closes = prices.weekly_closes(commodity.ticker)
+            price_pct = prices.pct_change(closes, prior_date, as_of)
 
-        change = latest_net - prev_net if has_prior_week else None
-        price_move = None
-        if has_prior_week:
-            if ticker not in price_cache:
-                price_cache[ticker] = prices.daily_closes(ticker)
-            price_move = prices.price_change(price_cache[ticker], latest_date, prior_date)
-
-        rows.append(MarketRow(market, latest_date, latest_net, change, _percentile_rank(nets, latest_net), price_move))
-
-    rows.sort(key=lambda r: r.pct, reverse=True)
-    return rows
+        pct = 100.0 * sum(1 for v in nets if v <= net) / len(nets)
+        out.append(Reading(name, commodity.sector, as_of, net, len(nets), pct, change, price_pct))
+    return out
 
 
-def _crowding_read(row: MarketRow) -> str:
-    """One sentence: is price confirming this positioning extreme, or diverging from it."""
-    direction = "long" if row.pct >= _EXTREME_HIGH else "short"
-
-    if row.change is None or row.price_move is None:
-        return (f"**{row.name}** sits at the {_ordinal(row.pct)} percentile of its own history "
-                f"(crowded {direction}), but there's no prior-week data yet to say whether "
-                "that's a new move or already been the case a while.")
-
-    price_pct = row.price_move[1]
-    price_dir = "up" if price_pct > 0.05 else "down" if price_pct < -0.05 else "roughly flat"
-    confirming = (direction == "long" and price_pct > 0.05) or (direction == "short" and price_pct < -0.05)
-
-    if price_dir == "roughly flat":
-        verdict = "price hasn't confirmed either way yet"
-    elif confirming:
-        verdict = ("price is confirming the crowd for now -- momentum is with the position, "
-                   "but a stretch this extreme is also historically the kind that unwinds "
-                   "sharply once it turns")
-    else:
-        verdict = ("that's a **divergence**: price is moving against the crowded position, "
-                   "which is often the first sign a stretched trade is starting to unwind")
-
-    return (f"**{row.name}** is at the {_ordinal(row.pct)} percentile (crowded {direction}, "
-            f"{row.change:+,} contracts this week) while price moved {price_dir} "
-            f"{abs(price_pct):.1f}% over the same week -- {verdict}.")
+def _predictive_power_note() -> str:
+    """One line stating the measured predictive power, so this never reads as a signal."""
+    try:
+        pooled = json.loads(_RESEARCH_FILE.read_text(encoding="utf-8"))["pooled"]
+    except (OSError, ValueError, KeyError):
+        return ""
+    best = min(pooled, key=lambda p: p["p_value_quarter_clustered"])
+    rates = [p["reversion_hit_rate"] for p in pooled]
+    return (
+        f"Positioning extremes are context, not forecasts. Across {best['episodes']} historical "
+        f"episodes in {best['clusters_quarters']} distinct quarters, forward returns after a "
+        f"crowded reading were indistinguishable from chance (mean reversion hit rate "
+        f"{min(rates)*100:.0f}-{max(rates)*100:.0f}%, best p={best['p_value_quarter_clustered']:.2f}). "
+        f"See research/FINDINGS.md."
+    )
 
 
-def _key_takeaways(rows: list[MarketRow]) -> list[str]:
-    extremes = [r for r in rows if r.pct >= _EXTREME_HIGH or r.pct <= _EXTREME_LOW]
-    crowded_long = sum(1 for r in extremes if r.pct >= _EXTREME_HIGH)
-    crowded_short = len(extremes) - crowded_long
-
-    lines = [f"**{len(extremes)} of {len(rows)}** tracked commodities are at a positioning "
-             f"extreme this week (top or bottom decile of their own history): "
-             f"{crowded_long} crowded long, {crowded_short} crowded short."]
-    if not extremes:
-        return lines
-
-    lines.append("")
-    for row in extremes:
-        lines.append(f"- {_crowding_read(row)}")
-
-    biggest_movers = [r for r in rows if r.change is not None]
-    biggest_movers.sort(key=lambda r: abs(r.change), reverse=True)
-    if biggest_movers:
-        lines.append("")
-        lines.append("**Biggest positioning shifts this week:**")
-        for row in biggest_movers[:5]:
-            price_bit = f", price {row.price_move[1]:+.1f}%" if row.price_move else ""
-            lines.append(f"- {row.name}: {row.change:+,} contracts ({_ordinal(row.pct)} percentile{price_bit})")
-
-    return lines
+def _fmt(r: Reading) -> str:
+    bits = [f"{_ordinal(r.pct)} pct of {r.weeks:,}wk"]
+    if r.change is not None:
+        bits.append(f"{r.change:+,} contracts")
+    if r.price_pct is not None:
+        bits.append(f"price {r.price_pct*100:+.1f}%")
+    return f"**{r.name}**: {', '.join(bits)}"
 
 
 def build_report(by_market: MarketHistory, title: str = "Legacy Report (Futures Only)") -> str:
-    """Render the report: a plain-English read first, the supporting table second."""
-    rows = _collect_rows(by_market)
-    latest_overall = rows[0].as_of if rows else None
+    """Short, readable, descriptive. Detail table last, caveat at the bottom."""
+    rows = _collect(by_market)
+    if not rows:
+        return "# COT Weekly\n\nNo commodities could be read from this week's file."
 
-    lines = [
-        f"# COT Weekly Report - {title}",
-        "",
-        f"Report as of {latest_overall}, generated {date.today().isoformat()}. "
-        f"{len(rows)} benchmark commodities tracked.",
-        "",
-        "## Key takeaways",
-        "",
-        *_key_takeaways(rows),
-        "",
-        "## Full data",
-        "",
-        "Percentile is versus each market's own full available history; higher means a "
-        "more crowded net-long speculative position. Price change covers the same week "
-        "as the position change.",
-        "",
-        "| Market | As of | Net Non-Commercial | Change vs prior report | Percentile vs history | Price change (same week) |",
-        "|---|---|---|---|---|---|",
-    ]
-    for row in rows:
-        change_cell = f"{row.change:+,}" if row.change is not None else "n/a (no prior week yet)"
-        price_cell = f"{row.price_move[1]:+.1f}%" if row.price_move else "n/a"
-        lines.append(f"| {row.market} | {row.as_of} | {row.net:+,} | {change_cell} | {_ordinal(row.pct)} | {price_cell} |")
+    rows.sort(key=lambda r: r.pct, reverse=True)
+    as_of = max(r.as_of for r in rows)
+    longs = [r for r in rows if r.pct >= _EXTREME_HIGH]
+    shorts = [r for r in rows if r.pct <= _EXTREME_LOW]
+    movers = sorted([r for r in rows if r.change is not None], key=lambda r: abs(r.change), reverse=True)
 
+    lines = [f"# COT Weekly, report as of {as_of}", ""]
+
+    headline = f"{len(rows)} commodities tracked. {len(longs) + len(shorts)} at a positioning extreme"
+    if longs or shorts:
+        headline += f" ({len(longs)} crowded long, {len(shorts)} crowded short)"
+    if movers:
+        headline += f". Biggest shift: {movers[0].name} {movers[0].change:+,} contracts"
+    lines += [headline + ".", ""]
+
+    # Until a second weekly snapshot accumulates, there is no prior week to
+    # difference against and every change/price cell would read "n/a". Say
+    # that once here instead of 24 times in the table.
+    if not movers:
+        lines += ["Week over week changes and price moves are not shown yet: only one weekly "
+                  "snapshot has accumulated so far, so there is no prior report to compare "
+                  "against. These fill in from the next run onward.", ""]
+
+    if longs:
+        lines += ["## Crowded long", ""] + [f"- {_fmt(r)}" for r in longs] + [""]
+    if shorts:
+        lines += ["## Crowded short", ""] + [f"- {_fmt(r)}" for r in reversed(shorts)] + [""]
+    if movers:
+        lines += ["## Biggest shifts this week", ""] + [f"- {_fmt(r)}" for r in movers[:5]] + [""]
+
+    lines += ["## All commodities", "",
+              "| Commodity | Sector | Net position | vs prior wk | Percentile | History | Price (wk) |",
+              "|---|---|---|---|---|---|---|"]
+    for r in rows:
+        change = f"{r.change:+,}" if r.change is not None else "n/a"
+        price = f"{r.price_pct*100:+.1f}%" if r.price_pct is not None else "n/a"
+        lines.append(f"| {r.name} | {r.sector} | {r.net:+,} | {change} | {_ordinal(r.pct)} | "
+                     f"{r.weeks:,}wk | {price} |")
+
+    note = _predictive_power_note()
+    if note:
+        lines += ["", "---", "", note]
     return "\n".join(lines)

@@ -82,6 +82,9 @@ files, same as the base kit's own design intent:
 | `fund_data.py` | `CATEGORIES` (the 7 report types), `discover_build_id` (fetches+caches the historical page), `fetch_fund` (builds the {year: {url, extract}} document dict for one category) |
 | `fund_index.py` | Wraps `fund_data.CATEGORIES` in the same cached-list-with-refresh-banner shape the GUI expects. No crawling - the list can't shrink except from a code bug, hence `_MIN_PLAUSIBLE_FUND_COUNT = 7` |
 | `downloader.py` | `_download_and_extract_zip` (unzips a historical year and saves its one `.txt` member), `_DOC_NAMES`/`_ACRONYMS` emptied (doc keys are plain year strings, no mapping needed). Skip-if-exists only applies to `extract: True` (historical, immutable) entries -- the current year's file is always re-fetched and overwritten, since it's CFTC's continuously-updated feed, not a static document |
+| `contracts.py` | The 24-commodity universe, each as a **chain** of CFTC names. CFTC renames contracts when exchanges merge or specs change, and treating each name as its own market shattered 40-year histories into fragments: copper read as 205 weeks instead of 1,898, cocoa was split 6 ways, and crude was being read off a secondary ICE listing while priced against NYMEX. Deliberately excludes co-trading contracts (CORN MidAmerica alongside CBOT) and size variants (MICRO GOLD alongside GOLD), which would double-count |
+| `prices.py` | Weekly closes from Yahoo's public chart endpoint. Two traps found by testing: `range=max` silently returns **monthly** bars, so explicit `period1`/`period2` epochs are required; and history starts mid-2000, which caps any price-linked study at ~26 years even though positioning goes back to 1986. Cached to `.cot-cache/prices/` |
+| `study.py` | The forward-return study. Offline research step, not part of the weekly job. See "The empirical finding" below before touching it |
 
 ## Weekly automation
 
@@ -170,6 +173,51 @@ constant (or loop `fund_data.CATEGORIES`) in `weekly_update.py`, and give
 column layout -- Disaggregated/TFF split "commercial" into more categories
 (Managed Money, Producer/Merchant, Swap Dealer), so it isn't a drop-in reuse of
 the Legacy column indices.
+
+## The empirical finding (read this before "improving" the report)
+
+`study.py` tested whether crowded positioning predicts forward returns.
+**It does not.** 138 per-commodity tests: zero reach nominal p<0.05 (about 7
+expected by chance). Pooled across commodities, where the sample is actually
+big enough to have power: 185 episodes across 87 distinct quarters, mean
+excess return +0.65% at 4 weeks, reversion hit rates 42-56%, no p-value below
+0.26. Results in `research/FINDINGS.md`, machine-readable in
+`research/forward_returns.json`.
+
+Consequences that must not be quietly undone:
+
+- **The weekly report describes, it does not forecast.** An earlier version
+  said crowded positioning "could unwind sharply, historically the kind of
+  stretch that snaps back." That is an unfalsifiable claim the data actively
+  contradicts. `analysis._predictive_power_note` puts the measured hit rate
+  in the email footer for exactly this reason. Do not reintroduce predictive
+  language, and if someone asks for a "signal" or a trade recommendation, the
+  honest answer is that this dataset does not support one.
+- **The reason it is a null is sample size, and that is the interesting part.**
+  40 years x 24 commodities looks like 45,000 observations, but positioning is
+  a highly persistent stock variable, so it collapses to 3-12 independent
+  *episodes* per commodity per tail. Any future analysis that reports n in the
+  hundreds or thousands for a single commodity has almost certainly forgotten
+  to collapse overlapping weeks and is producing inflated significance.
+
+Four guards in `study.py` are load-bearing; removing any of them turns the
+null into a false positive:
+
+1. **Point-in-time percentiles** (`point_in_time_percentiles`) rank each week
+   against only prior weeks. Full-history ranking is look-ahead bias.
+2. **Episode collapsing** (`episode_starts`, `_MIN_EPISODE_GAP`) makes the
+   observation count the number of events, not weeks.
+3. **Circular block bootstrap** preserves return autocorrelation under the
+   null; an i.i.d. assumption understates the error bars.
+4. **Quarter-clustered resampling** for the pooled test, because commodities
+   crowd together (grains as a bloc) and same-quarter episodes are not
+   independent draws.
+
+Extending this properly: the Disaggregated report separates Managed Money
+from Producer/Merchant and Swap Dealers, which is a cleaner speculation proxy
+than the legacy non-commercial bucket (CFTC split the report in 2009 for that
+reason). Testing Managed Money positioning on 2009-present is the obvious
+next experiment, at the cost of a much shorter history.
 
 ## Do Not Touch
 
