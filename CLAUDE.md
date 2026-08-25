@@ -1,4 +1,4 @@
-Last updated: 2026-08-25 | Status: manual GUI built; weekly cloud automation built, not yet pushed/deployed
+Last updated: 2026-08-25 | Status: pushed to `AdamMooo/cot-scraper`; weekly automation live pending the three Gmail secrets
 
 ## Repo Card
 
@@ -85,7 +85,8 @@ files, same as the base kit's own design intent:
 | `contracts.py` | The 24-commodity universe, each as a **chain** of CFTC names. CFTC renames contracts when exchanges merge or specs change, and treating each name as its own market shattered 40-year histories into fragments: copper read as 205 weeks instead of 1,898, cocoa was split 6 ways, and crude was being read off a secondary ICE listing while priced against NYMEX. Deliberately excludes co-trading contracts (CORN MidAmerica alongside CBOT) and size variants (MICRO GOLD alongside GOLD), which would double-count |
 | `prices.py` | Weekly closes from Yahoo's public chart endpoint. Two traps found by testing: `range=max` silently returns **monthly** bars, so explicit `period1`/`period2` epochs are required; and history starts mid-2000, which caps any price-linked study at ~26 years even though positioning goes back to 1986. Cached to `.cot-cache/prices/` |
 | `study.py` | Time-series forward-return study. Offline research step, not part of the weekly job. See "The empirical finding" below before touching it |
-| `cross_section.py` | Cross-sectional test: rank all commodities against each other weekly, long least-crowded vs short most-crowded. Exists because the time-series test is sample-starved (8 episodes per commodity); this gets 1,348 portfolio-weeks. Result is nominally significant but fails every robustness check, so also not a finding |
+| `cross_section.py` | Cross-sectional test: rank all commodities against each other weekly, long least-crowded vs short most-crowded. Exists because the time-series test is sample-starved (8 episodes per commodity); this gets 1,348 portfolio-weeks. The nominally-significant spread turns out to be a volatility tilt, not positioning -- see "The cross-sectional attempt" below before touching it |
+| `roll_check.py` | Data-quality diagnostic for `prices.py`: bucket weekly \|return\| by day-of-month to find contract-roll gaps in Yahoo's non-roll-adjusted continuous series. Flags 3 of 24 (Class III Milk, Lean Hogs, Live Cattle). Standalone, no effect on the weekly job |
 
 ## Weekly automation
 
@@ -223,20 +224,74 @@ portfolio-weeks**. That is the version of this question with real statistical
 power, and it is how the commodity factor literature tests positioning.
 
 Baseline result looks like something: +0.113% per week, +5.9% annualised,
-p=0.047. **It does not survive contact with the robustness table**, and the
-table is the point:
+p=0.047. **It is not a positioning effect.** What it actually is was
+identified on 2026-08-25, and the diagnosis matters more than the verdict
+because the first version of this file reached the right verdict by the
+wrong route.
 
-| Check | p | Why it matters |
-|---|---|---|
-| Quintiles instead of terciles | 0.174 | a real monotonic signal should *sharpen* under a more extreme sort, not weaken |
-| Returns clipped at +/-5%/wk | 0.381 | the effect mostly lives in large weekly moves |
-| First half alone | 0.187 | neither half stands on its own |
-| Second half alone | 0.140 | " |
+**What it is: a volatility tilt.** The least-crowded leg is systematically
+more volatile than the most-crowded leg -- +0.37pp per week, p=0.000,
+holding in 69% of weeks. Equal weighting sizes by dollar, not by risk, so
+the portfolio was long high-vol and short low-vol commodities two weeks in
+three. There is a mechanism, not just a correlation: volatility clusters,
+and speculators cut net length *after* adverse moves, so a low crowding
+percentile mechanically coincides with elevated trailing vol. The signal is
+partly a lagged volatility proxy. Scaling each leg to equal risk
+(`vol_scaled_leg`) takes the estimate from +6.6% to +5.0% annualised and p
+from 0.027 to ~0.15.
 
-0 of 5 robustness specs clear p<0.05. So the verdict is "nominally
-significant, fragile, not established". The one genuinely encouraging feature
-is that the magnitude is stable across halves (+5.7% vs +6.0% annualised),
-which is what a small real effect starved of power would also look like.
+**The decisive test is the rank information coefficient, not the spread.**
+Mean weekly Spearman correlation between crowding percentile and forward
+return is about -0.005, p=0.42 -- right sign, indistinguishable from zero,
+in both halves. Ranking caps how much any one extreme return contributes, so
+a genuine monotonic ordering survives it and a magnitude artifact does not.
+There is no cross-sectional ordering to find. Standard-literature terms for
+reading further: information coefficient and Grinold's fundamental law
+(IR = IC * sqrt(breadth)); Frazzini-Pedersen betting-against-beta for the
+general "the tilt was the return" result; Moreira-Muir for vol management.
+
+**Losing significance is not proving zero.** Risk parity moves the point
+estimate by roughly a quarter, which alone would be suggestive rather than
+conclusive. The reading is decisive because three independent angles agree:
+no rank information, a highly significant vol tilt in the legs, and the 20
+largest weeks netting *against* the effect (they are +16.2% and -16.2% at
+the top and largely cancel, so no handful of weeks drives it either).
+
+**Roll contamination was the wrong suspect, and this file previously named
+it the highest-value next step. It is not.** `roll_check.py` localises it:
+bucket weekly |return| by day-of-month, and a calendar-fixed expiry makes a
+roll gap land in a consistent bucket. Three of 24 series are contaminated --
+Class III Milk 2.97x (0.35% mid-month against 6.06% at month-end; its front
+contract settles to an announced monthly price so it sits pinned, then jumps
+contracts), Lean Hogs 1.51x and Live Cattle 1.38x, and each peak bucket
+matches that contract's actual expiry rule. The rest of the universe is flat
+to within 1.25x. **Removing the three makes the raw effect stronger, not
+weaker** (+6.3% annualised, p=0.033; milk alone out, +7.0%, p=0.028). Roll
+gaps were adding noise, not manufacturing the result. A roll-adjusted feed
+would sharpen the analysis; it would not change the conclusion.
+
+**Three of the original five robustness specs were misread as failures.**
+This is the reusable lesson, kept visible on purpose. A p-value is an effect
+size over a standard error, and a spec can raise it by shrinking the
+numerator (evidence against the effect) or inflating the denominator
+(evidence about nothing). Compare *means*, not p-values:
+
+| Original check | mean/wk | p | What it actually tested |
+|---|---|---|---|
+| Quintiles instead of terciles | +0.110% | 0.174 | power, not monotonicity -- a quintile leg holds ~4 names against a tercile's ~8, so it is less diversified and noisier. The mean is *unchanged*; only the standard error moved. |
+| First half alone | +0.110% | 0.187 | power -- halving the sample multiplies the SE by ~sqrt(2), so an effect at p=0.045 in full is *expected* near p=0.15 in half |
+| Second half alone | +0.116% | 0.140 | same; the halves differ from each other by 0.3% annualised, i.e. nothing (Gelman-Stern: a difference in significance is not significance in difference) |
+| Returns clipped at +/-5% | +0.035% | 0.381 | too aggressive to be an outlier test -- it binds on **19%** of commodity-weeks, compressing the whole distribution in the volatile half of the universe. The +/-10% version binds on 4% and leaves the estimate at +5.1% |
+
+The robustness table now tags each spec `effect size` / `power` /
+`distorted` and only counts the effect-size rows, and adds a
+leave-one-commodity-out jackknife -- the original varied buckets, clipping
+and time but never cross-section *membership*, the axis a 24-name portfolio
+is most exposed on. 22 of 24 single drops leave p<0.05; only Coffee (0.104)
+is a real single-name dependency. Watch the mechanical artifact there:
+dropping any name takes the tercile cut from 24//3=8 to 23//3=7, so most
+drops nudge the mean up for reasons having nothing to do with the dropped
+contract.
 
 Two corrections found here are worth not re-breaking:
 
@@ -245,12 +300,11 @@ Two corrections found here are worth not re-breaking:
   seven days on unpublished information. `_ENTRY_LAG_WEEKS = 1` fixes it, and
   it cost a quarter of the raw effect (p 0.006 -> 0.046). Do not "simplify"
   this away.
-- **Yahoo's continuous series is not roll-adjusted.** Every roll injects a
-  price gap that is not a real return, and because term structure correlates
-  with positioning, those gaps do not wash out at random. Given the effect
-  collapses when returns are clipped, this is the leading candidate
-  explanation for whatever is left. Resolving it needs a roll-aware return
-  series and is the highest-value next step before any further modelling.
+- **Point-in-time trailing vol.** The risk-parity spec uses the 52 weeks
+  strictly before entry (`_VOL_WINDOW`, sliced `[:entry]`). Full-sample vol
+  is the easier thing to write and is look-ahead bias of exactly the kind
+  `point_in_time_percentiles` exists to prevent: it would let the portfolio
+  know in advance which weeks were calm.
 
 Extending this properly: the Disaggregated report separates Managed Money
 from Producer/Merchant and Swap Dealers, which is a cleaner speculation proxy
@@ -258,7 +312,11 @@ than the legacy non-commercial bucket (CFTC split the report in 2009 for that
 reason). Testing Managed Money positioning on 2009-present is the obvious
 next experiment, at the cost of a much shorter history. Do it inside the
 cross-sectional framing, not the time-series one, or the sample will be too
-small to say anything.
+small to say anything -- and carry the vol-tilt controls in from the start.
+A cleaner speculation proxy is if anything *more* likely to correlate with
+volatility, so a fresh equal-weighted tercile spread on Managed Money would
+reproduce the same artifact and look like a discovery. Report its IC and its
+risk-parity spread alongside the raw spread, or it is not worth running.
 
 ## Do Not Touch
 

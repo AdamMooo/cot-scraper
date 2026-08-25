@@ -15,10 +15,18 @@ then pivoted the same day once the actual goal came up: an unattended weekly pip
 analysis, not an exe for someone else to run. The GUI still works and wasn't removed, but
 it's no longer the point.
 
-Built, tested locally end-to-end, **not yet pushed to GitHub or deployed** -- the GitHub
-Actions secrets (Gmail App Password) still need setting from the user's own terminal
-(credential setup Claude won't do), and nothing has been pushed to `AdamMooo/cot-scraper`
-yet. See `README.md` "One-time setup" for the exact commands.
+Built, tested locally end-to-end, and **pushed to `AdamMooo/cot-scraper`**. The only thing
+between it and a live Friday run is the three GitHub Actions secrets (Gmail App Password),
+which have to be set from Adam's own terminal -- credential setup Claude won't do. See
+`README.md` "One-time setup" for the exact commands.
+
+The download/report half is finished. The research half is settled too, in the negative:
+the positioning signal was tested three ways and the one nominally-significant result turns
+out to be a volatility tilt rather than a signal. Two estimators in `cross_section.py`
+(`spearman_ic`, `vol_scaled_leg`) are deliberately left as `NotImplementedError` holes for
+Adam to write -- the scaffolding, plumbing and writeup around them are done and validated,
+so the file does not run until those two are filled. Nothing imports `cross_section`, so
+the Friday automation is unaffected.
 
 ## Handoff Notes
 
@@ -34,6 +42,44 @@ data" turned out to be the real ask, not just downloading. Text-only stuck throu
 (smaller, pandas-ready).
 
 ## Recent Changes
+
+- 2026-08-25 (diagnosis, and a correction to the same day's own conclusions): Re-audited the
+  cross-sectional result instead of accepting it, and the verdict survived while the reasoning
+  did not. **The +5.9%/yr spread is a volatility tilt, not positioning.** The least-crowded leg
+  is systematically more volatile than the most-crowded (+0.37pp/wk, p=0.000, 69% of weeks) --
+  with a mechanism, not a coincidence: vol clusters and speculators cut net length *after*
+  adverse moves, so low crowding mechanically coincides with high trailing vol. Risk-parity
+  legs take it to +5.0%, p~0.15. The decisive test is the rank information coefficient, which
+  is flat (-0.005, p=0.42, both halves) -- there is no cross-sectional ordering to find.
+  **Three of the five original robustness specs were misread as failures**: quintiles and both
+  sample halves raised p by inflating the standard error, not by shrinking the effect (their
+  means are 5.7/5.7/6.0% annualised, i.e. unchanged), and the +/-5% clip binds on 19% of
+  observations so it compresses the distribution rather than trimming tails. Added
+  `roll_check.py`, which retires the previously-stated top priority: roll contamination is
+  real but confined to 3 of 24 series (Class III Milk, Lean Hogs, Live Cattle, each peaking in
+  the bucket matching its own expiry rule), and removing them makes the effect *stronger*, so
+  the gaps were adding noise rather than manufacturing the result. A roll-adjusted feed would
+  sharpen the analysis, not change it. Also fixed docs that still said "not pushed to GitHub"
+  and a roll-blocker claim written earlier in the same session.
+
+- 2026-08-25 (research arc, and it is a null): Tested whether the positioning metric the
+  weekly report is built on actually predicts anything. It does not, twice over. `study.py`
+  (time-series, forward returns): 138 per-commodity tests, **zero** at nominal p<0.05 where
+  ~7 were expected by chance; pooled, no p below 0.26. The reason is sample size and that's
+  the interesting part -- 40 years x 24 commodities looks like 45,000 observations but
+  positioning is a persistent stock variable, so it collapses to 3-12 independent *episodes*
+  per commodity per tail. `cross_section.py` (rank all 24 against each other weekly, long
+  least-crowded / short most-crowded) buys real power -- 1,348 portfolio-weeks -- and the
+  baseline looks like something at +5.9%/yr, p=0.047, but **0 of 5 robustness specs survive**
+  (quintiles 0.174, returns clipped at +/-5% 0.381, halves 0.187/0.140). Verdict recorded as
+  "nominally significant, fragile, not established". Two corrections found en route that must
+  not be undone: an entry lag (CFTC is as-of Tuesday, published Friday -- forming on the
+  as-of date traded 3 of 7 days on unpublished information, and fixing it cost a quarter of
+  the raw effect), and normalizing net position by open interest instead of using raw
+  contracts, which was ranking market growth. Consequence for the product: the weekly email
+  **describes, it does not forecast** -- earlier predictive language ("could unwind sharply")
+  was removed as an unfalsifiable claim the data contradicts, and the measured hit rate now
+  sits in the email footer. Results in `research/FINDINGS.md` and `research/CROSS-SECTION.md`.
 
 - 2026-08-25 (automation pivot): Added `weekly_update.py`, `analysis.py`, `notify.py`, and
   `.github/workflows/weekly-cot-update.yml` for the unattended Friday pipeline. Two curation
@@ -59,14 +105,14 @@ data" turned out to be the real ask, not just downloading. Text-only stuck throu
 
 ## Known Issues
 
-Not pushed to `AdamMooo/cot-scraper` yet, and the three GitHub Actions secrets
-(`GMAIL_USER`, `GMAIL_APP_PASSWORD`, `MAIL_TO`) aren't set, so the workflow can't
-successfully run until both happen. No `.venv` created for this repo -- ran against system
-Python 3.13 during development. `build_exe.py` untested against this fork (not the current
+The three GitHub Actions secrets (`GMAIL_USER`, `GMAIL_APP_PASSWORD`, `MAIL_TO`) aren't
+set, so the Friday workflow will run the download and commit the report but fail at the
+email step. Yahoo's continuous front-month series is not roll-adjusted, and
+`roll_check.py` shows 3 of 24 series are materially contaminated (Class III Milk, Lean
+Hogs, Live Cattle) -- but this is a data-quality wart, not a blocker: removing those three
+makes the cross-sectional effect *stronger*, so roll gaps were adding noise rather than
+manufacturing the result. A roll-adjusted feed would sharpen the analysis, nothing more. No `.venv` created for this repo -- ran against system Python 3.13 during
+development. `build_exe.py` untested against this fork (not the current
 priority). Analysis covers only the Legacy (Futures Only) report; Disaggregated/TFF
 breakdowns (Managed Money vs. Producer positioning) are a possible fast follow, not done.
 
-## Memory
-
-[[project_cot_scraper|project memory]] in the purpose-doc-scraper session's memory store
-has the cross-session summary of why this exists and the key design calls.
