@@ -31,6 +31,7 @@ Public interface:
 """
 
 import csv
+from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
 
@@ -127,17 +128,44 @@ def _percentile_rank(history_values: list[int], latest: int) -> float:
     return 100 * at_or_below / len(history_values)
 
 
-def build_report(by_market: MarketHistory, title: str = "Legacy Report (Futures Only)") -> str:
-    """Render one markdown table: positioning next to the same week's price move.
+# A market in the top or bottom decile of its own history is "crowded" --
+# stretched enough to be worth naming, not just a data point in the table.
+_EXTREME_HIGH = 90
+_EXTREME_LOW = 10
+
+
+def _ordinal(n: float) -> str:
+    i = round(n)
+    if 11 <= i % 100 <= 13:
+        suffix = "th"
+    else:
+        suffix = {1: "st", 2: "nd", 3: "rd"}.get(i % 10, "th")
+    return f"{i}{suffix}"
+
+
+@dataclass
+class MarketRow:
+    market: str  # full CFTC name, "CORN - CHICAGO BOARD OF TRADE"
+    as_of: str
+    net: int
+    change: int | None  # contracts vs. prior report; None if no real prior week yet
+    pct: float  # percentile of `net` vs. this market's own full history
+    price_move: tuple[float, float] | None  # (latest close, % change); None if unavailable
+
+    @property
+    def name(self) -> str:
+        return self.market.rsplit(" - ", 1)[0]
+
+
+def _collect_rows(by_market: MarketHistory) -> list[MarketRow]:
+    """One MarketRow per currently-active, ticker-mapped, benchmark commodity.
 
     Only markets with a ticker in prices.MARKET_TICKERS are included (see
-    module docstring for why). Markets with fewer than two dated rows are
-    skipped -- there's no prior week to compare against yet.
+    module docstring for why). A market that stopped being reported decades
+    ago would otherwise trivially rank "100th percentile" against its own
+    short, ancient history, so only markets reported as of the most recent
+    date anyone has are considered active.
     """
-    # A market that stopped being reported decades ago still trivially ranks
-    # "100th percentile" against its own short, ancient history otherwise --
-    # only markets reported as of the most recent date anyone has are still
-    # active and worth surfacing.
     latest_overall = max((h[-1][0] for h in by_market.values() if h), default=None)
 
     price_cache: dict[str, dict[str, float]] = {}
@@ -161,24 +189,94 @@ def build_report(by_market: MarketHistory, title: str = "Legacy Report (Futures 
                 price_cache[ticker] = prices.daily_closes(ticker)
             price_move = prices.price_change(price_cache[ticker], latest_date, prior_date)
 
-        rows.append((market, latest_date, latest_net, change, _percentile_rank(nets, latest_net), price_move))
+        rows.append(MarketRow(market, latest_date, latest_net, change, _percentile_rank(nets, latest_net), price_move))
 
-    rows.sort(key=lambda r: r[4], reverse=True)
+    rows.sort(key=lambda r: r.pct, reverse=True)
+    return rows
+
+
+def _crowding_read(row: MarketRow) -> str:
+    """One sentence: is price confirming this positioning extreme, or diverging from it."""
+    direction = "long" if row.pct >= _EXTREME_HIGH else "short"
+
+    if row.change is None or row.price_move is None:
+        return (f"**{row.name}** sits at the {_ordinal(row.pct)} percentile of its own history "
+                f"(crowded {direction}), but there's no prior-week data yet to say whether "
+                "that's a new move or already been the case a while.")
+
+    price_pct = row.price_move[1]
+    price_dir = "up" if price_pct > 0.05 else "down" if price_pct < -0.05 else "roughly flat"
+    confirming = (direction == "long" and price_pct > 0.05) or (direction == "short" and price_pct < -0.05)
+
+    if price_dir == "roughly flat":
+        verdict = "price hasn't confirmed either way yet"
+    elif confirming:
+        verdict = ("price is confirming the crowd for now -- momentum is with the position, "
+                   "but a stretch this extreme is also historically the kind that unwinds "
+                   "sharply once it turns")
+    else:
+        verdict = ("that's a **divergence**: price is moving against the crowded position, "
+                   "which is often the first sign a stretched trade is starting to unwind")
+
+    return (f"**{row.name}** is at the {_ordinal(row.pct)} percentile (crowded {direction}, "
+            f"{row.change:+,} contracts this week) while price moved {price_dir} "
+            f"{abs(price_pct):.1f}% over the same week -- {verdict}.")
+
+
+def _key_takeaways(rows: list[MarketRow]) -> list[str]:
+    extremes = [r for r in rows if r.pct >= _EXTREME_HIGH or r.pct <= _EXTREME_LOW]
+    crowded_long = sum(1 for r in extremes if r.pct >= _EXTREME_HIGH)
+    crowded_short = len(extremes) - crowded_long
+
+    lines = [f"**{len(extremes)} of {len(rows)}** tracked commodities are at a positioning "
+             f"extreme this week (top or bottom decile of their own history): "
+             f"{crowded_long} crowded long, {crowded_short} crowded short."]
+    if not extremes:
+        return lines
+
+    lines.append("")
+    for row in extremes:
+        lines.append(f"- {_crowding_read(row)}")
+
+    biggest_movers = [r for r in rows if r.change is not None]
+    biggest_movers.sort(key=lambda r: abs(r.change), reverse=True)
+    if biggest_movers:
+        lines.append("")
+        lines.append("**Biggest positioning shifts this week:**")
+        for row in biggest_movers[:5]:
+            price_bit = f", price {row.price_move[1]:+.1f}%" if row.price_move else ""
+            lines.append(f"- {row.name}: {row.change:+,} contracts ({_ordinal(row.pct)} percentile{price_bit})")
+
+    return lines
+
+
+def build_report(by_market: MarketHistory, title: str = "Legacy Report (Futures Only)") -> str:
+    """Render the report: a plain-English read first, the supporting table second."""
+    rows = _collect_rows(by_market)
+    latest_overall = rows[0].as_of if rows else None
 
     lines = [
         f"# COT Weekly Report - {title}",
         "",
-        f"Generated {date.today().isoformat()} for the report as of {latest_overall}. "
-        f"{len(rows)} benchmark commodities tracked. Percentile is versus each market's "
-        "own full available history; higher means a more crowded net-long speculative "
-        "position. Price change covers the same week as the position change.",
+        f"Report as of {latest_overall}, generated {date.today().isoformat()}. "
+        f"{len(rows)} benchmark commodities tracked.",
+        "",
+        "## Key takeaways",
+        "",
+        *_key_takeaways(rows),
+        "",
+        "## Full data",
+        "",
+        "Percentile is versus each market's own full available history; higher means a "
+        "more crowded net-long speculative position. Price change covers the same week "
+        "as the position change.",
         "",
         "| Market | As of | Net Non-Commercial | Change vs prior report | Percentile vs history | Price change (same week) |",
         "|---|---|---|---|---|---|",
     ]
-    for market, as_of, net, change, pct, price_move in rows:
-        change_cell = f"{change:+,}" if change is not None else "n/a (no prior week yet)"
-        price_cell = f"{price_move[1]:+.1f}%" if price_move else "n/a"
-        lines.append(f"| {market} | {as_of} | {net:+,} | {change_cell} | {pct:.0f}th | {price_cell} |")
+    for row in rows:
+        change_cell = f"{row.change:+,}" if row.change is not None else "n/a (no prior week yet)"
+        price_cell = f"{row.price_move[1]:+.1f}%" if row.price_move else "n/a"
+        lines.append(f"| {row.market} | {row.as_of} | {row.net:+,} | {change_cell} | {_ordinal(row.pct)} | {price_cell} |")
 
     return "\n".join(lines)

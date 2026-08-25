@@ -138,6 +138,17 @@ out to be "collect and analyze every week," not "hand someone an exe."
   - `_MIN_OPEN_INTEREST` was dropped once the ticker allow-list existed --
     every whitelisted benchmark commodity already clears any reasonable
     liquidity bar, so a separate threshold added nothing
+  - **The report leads with a narrative, not a table.** A data table (even a
+    filtered, price-annotated one) isn't analysis -- the user's words after
+    the first version: "I DONT JUST WANT THE BENCHMARKS I WANT AN ACTUAL
+    ANALYSIS OF IT". `_key_takeaways`/`_crowding_read` name which markets are
+    at a genuine positioning extreme (top/bottom decile, `_EXTREME_HIGH`/
+    `_EXTREME_LOW`) and say in plain English whether price is *confirming*
+    the crowd (momentum, but historically the kind of stretch that unwinds
+    sharply) or *diverging* from it (often the first sign a crowded trade is
+    starting to break). The `## Full data` table stays underneath for anyone
+    who wants to check the underlying numbers, but it's no longer the point
+    of the email
 - **`prices.py`** -- Yahoo Finance's public, unofficial, no-API-key chart
   endpoint (`query1.finance.yahoo.com/v8/finance/chart/<ticker>`), plain
   `requests` through the shared session, no new dependency. Looks up the
