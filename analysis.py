@@ -141,29 +141,37 @@ class Reading:
     name: str
     sector: str
     as_of: str
-    net: int
+    net: int  # contracts, the figure people quote
+    share: float  # net as a fraction of open interest, what the percentile ranks
     weeks: int  # depth of the stitched history behind the percentile
     pct: float
-    change: int | None  # vs prior report; None when no true prior week on file
+    change: int | None  # contracts vs prior report; None when no true prior week
     price_pct: float | None  # same-week price move, fraction
 
 
 def _collect(by_market: MarketHistory) -> list[Reading]:
     """One Reading per commodity, using stitched rename chains.
 
-    The percentile is computed against the commodity's full stitched history
-    (~1,900 weeks for most), which is the whole reason contracts.py exists:
-    unstitched, copper's history looked like 205 weeks and every reading
-    scored as an all-time extreme.
+    Two things make the percentile meaningful, and both were bugs first:
+
+    - The history is stitched across CFTC renames (contracts.py), so it is
+      ~1,900 weeks rather than a fragment. Unstitched, copper's history read
+      as 205 weeks and every value scored as an all-time extreme.
+    - The ranked quantity is net position as a share of open interest, not
+      raw contracts. Open interest grew several-fold over 40 years, so a raw
+      count ranks market growth as much as crowding.
     """
     out = []
     for name, commodity in contracts.COMMODITIES.items():
         series = contracts.stitch(by_market, commodity)
-        if len(series) < 2:
+        shares = contracts.net_share(series)
+        if len(series) < 2 or len(shares) < 2:
             continue
-        nets = [n for _, n in series]
-        as_of, net = series[-1]
-        prior_date, prior_net = series[-2]
+
+        as_of, net, _oi = series[-1]
+        prior_date, prior_net, _prior_oi = series[-2]
+        if shares[-1][0] != as_of:
+            continue  # latest week had no usable open interest
 
         gap = (date.fromisoformat(as_of) - date.fromisoformat(prior_date)).days
         has_prior = gap <= _MAX_PLAUSIBLE_GAP_DAYS
@@ -174,8 +182,10 @@ def _collect(by_market: MarketHistory) -> list[Reading]:
             closes = prices.weekly_closes(commodity.ticker)
             price_pct = prices.pct_change(closes, prior_date, as_of)
 
-        pct = 100.0 * sum(1 for v in nets if v <= net) / len(nets)
-        out.append(Reading(name, commodity.sector, as_of, net, len(nets), pct, change, price_pct))
+        values = [v for _, v in shares]
+        share = shares[-1][1]
+        pct = 100.0 * sum(1 for v in values if v <= share) / len(values)
+        out.append(Reading(name, commodity.sector, as_of, net, share, len(values), pct, change, price_pct))
     return out
 
 
@@ -197,9 +207,9 @@ def _predictive_power_note() -> str:
 
 
 def _fmt(r: Reading) -> str:
-    bits = [f"{_ordinal(r.pct)} pct of {r.weeks:,}wk"]
+    bits = [f"{_ordinal(r.pct)} pct of {r.weeks:,}wk", f"net {r.share*100:+.1f}% of open interest"]
     if r.change is not None:
-        bits.append(f"{r.change:+,} contracts")
+        bits.append(f"{r.change:+,} contracts this wk")
     if r.price_pct is not None:
         bits.append(f"price {r.price_pct*100:+.1f}%")
     return f"**{r.name}**: {', '.join(bits)}"
@@ -242,13 +252,16 @@ def build_report(by_market: MarketHistory, title: str = "Legacy Report (Futures 
         lines += ["## Biggest shifts this week", ""] + [f"- {_fmt(r)}" for r in movers[:5]] + [""]
 
     lines += ["## All commodities", "",
-              "| Commodity | Sector | Net position | vs prior wk | Percentile | History | Price (wk) |",
-              "|---|---|---|---|---|---|---|"]
+              "Percentile ranks net position as a share of open interest, so it is not distorted "
+              "by decades of growth in market size.",
+              "",
+              "| Commodity | Sector | Net contracts | % of OI | vs prior wk | Percentile | History | Price (wk) |",
+              "|---|---|---|---|---|---|---|---|"]
     for r in rows:
         change = f"{r.change:+,}" if r.change is not None else "n/a"
         price = f"{r.price_pct*100:+.1f}%" if r.price_pct is not None else "n/a"
-        lines.append(f"| {r.name} | {r.sector} | {r.net:+,} | {change} | {_ordinal(r.pct)} | "
-                     f"{r.weeks:,}wk | {price} |")
+        lines.append(f"| {r.name} | {r.sector} | {r.net:+,} | {r.share*100:+.1f}% | {change} | "
+                     f"{_ordinal(r.pct)} | {r.weeks:,}wk | {price} |")
 
     note = _predictive_power_note()
     if note:

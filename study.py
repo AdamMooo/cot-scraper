@@ -75,7 +75,7 @@ REPO_ROOT = Path(__file__).resolve().parent
 RESEARCH_DIR = REPO_ROOT / "research"
 
 
-def point_in_time_percentiles(nets: list[int]) -> list[float | None]:
+def point_in_time_percentiles(values: list[float]) -> list[float | None]:
     """Percentile of each value against only the values at or before it.
 
     O(n log n) via an incrementally sorted history. Returns None for the
@@ -83,8 +83,8 @@ def point_in_time_percentiles(nets: list[int]) -> list[float | None]:
     observations to mean anything.
     """
     out: list[float | None] = []
-    history: list[int] = []
-    for value in nets:
+    history: list[float] = []
+    for value in values:
         bisect.insort(history, value)
         if len(history) < _WARMUP_WEEKS:
             out.append(None)
@@ -202,12 +202,14 @@ def run() -> dict:
     pooled: dict[tuple[str, int], list[tuple[str, float]]] = {}
     results = []
     for name, commodity in contracts.COMMODITIES.items():
-        stitched = contracts.stitch(by_market, commodity)
-        if len(stitched) < _WARMUP_WEEKS + max(HORIZONS) + 10:
+        # Deciles are computed on net position as a share of open interest,
+        # matching the weekly report. Ranking raw contract counts would let
+        # multi-decade growth in market size masquerade as crowding.
+        shares = contracts.net_share(contracts.stitch(by_market, commodity))
+        if len(shares) < _WARMUP_WEEKS + max(HORIZONS) + 10:
             continue
-        dates = [d for d, _ in stitched]
-        nets = [n for _, n in stitched]
-        pcts = point_in_time_percentiles(nets)
+        dates = [d for d, _ in shares]
+        pcts = point_in_time_percentiles([v for _, v in shares])
 
         series = prices.weekly_closes(commodity.ticker)
         if not series:
