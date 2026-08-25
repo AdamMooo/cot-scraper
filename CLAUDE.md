@@ -90,33 +90,62 @@ out to be "collect and analyze every week," not "hand someone an exe."
 
 - **`weekly_update.py`** -- the entry point. Downloads into `.cot-cache/`
   (gitignored; full history, restored across CI runs by `actions/cache` so the
-  ~300MB historical backfill is only ever fetched once), copies just the
-  current year's file into `data/<category>/` (git-tracked; small, changes
-  weekly), writes `reports/<date>.md` and `reports/latest.md` (git-tracked),
-  then emails the report. A failure anywhere sends a "FAILED" email before
-  re-raising, so a broken run is never silent
+  ~300MB historical backfill is only ever fetched once), then *merges* (not
+  copies -- see the current-year accumulation point below) this week's
+  snapshot into `data/<category>/<year>.txt` (git-tracked; small, grows one
+  row per market per week), writes `reports/<date>.md` and `reports/latest.md`
+  (git-tracked), then emails the report. A failure anywhere sends a "FAILED"
+  email before re-raising, so a broken run is never silent
 - **`analysis.py`** -- v1 scope is one report, one metric: Legacy (Futures
   Only), net non-commercial position vs. each market's own full history
-  (percentile) and vs. last week (change). Two curation steps matter and are
-  each documented inline where they happen:
+  (percentile) and vs. last week (change), shown next to what price actually
+  did the same week (`prices.py`) -- comparing the two, not positioning in
+  isolation, is the actual point (the user's words: "we need comparisons to
+  the actual price of the futures we are talking about to understand what
+  influence these reports and insights they provide. That's the whole
+  point"). Several corrections were needed once this was tested against
+  real data, not just written and assumed correct:
   - **Stale-market filter**: only markets reported as of the most recent date
     anyone has are included. Without this, a market that stopped being
     reported decades ago trivially scores "100th percentile" against its own
     short, ancient history
-  - **Non-commodity filter**: the Legacy report predates the 2009
-    Disaggregated split and still carries rates/FX/equity-index/crypto
-    instruments alongside corn and crude, plus ~150 thin ICE Futures Energy
-    Div / Nodal Exchange power-grid and pipeline-basis contracts that
-    dominate the extremes purely from having short, undiversified histories.
-    `_NON_COMMODITY_KEYWORDS` and `_NON_COMMODITY_EXCHANGES` are a manually
-    curated exclusion verified against the live 2026-08-25 data, not
-    exhaustive -- if a new financial product shows up in the report and slips
-    through, extend the list rather than rethinking the approach
-  - `_MIN_OPEN_INTEREST = 20_000` additionally drops illiquid contracts of
-    any kind
-  - The report itself is a curated highlights summary (top N most crowded
-    long/short, top N biggest movers), not a full dump -- there are still
-    ~50 markets left after filtering, too many to read as one flat list
+  - **Ticker allow-list, not a keyword exclusion list**: which markets get
+    analyzed is driven by `prices.MARKET_TICKERS`, ~26 benchmark commodities
+    with a real Yahoo Finance ticker, matched against the market name's
+    portion before " - <exchange>". An earlier version tried excluding
+    non-commodities by keyword/exchange and kept missing cases (abbreviated
+    currency names, DJIA variants, "EURO SHORT TERM RATE" not matching
+    "EURODOLLAR", etc.) -- requiring a real ticker is what actually pins the
+    report to "the commodity market" *and* is what makes the price
+    comparison possible at all, so it replaced the exclusion approach
+    entirely rather than living alongside it
+  - **Current-year accumulation, not overwrite**: CFTC's own current-year
+    text file is only ever this week's single snapshot per market, not a
+    running year-to-date file (confirmed 2026-08-25 by checking row counts
+    directly -- this was a real bug caught by testing, not an assumption
+    that happened to be right). `merge_current_year_snapshot` merges each
+    week's snapshot into `data/<category>/<year>.txt` keyed on
+    `(market, as_of)`, which is what lets the current year build up a real
+    week-over-week history at all. Without this, every automated run would
+    have silently overwritten last week's row with this week's
+  - **Gap-detection guard**: comparing "latest" against whatever's
+    technically "previous" only makes sense when that previous row is
+    actually ~1 week old. Early in the current year (or after a missed run),
+    the only "previous" row on file might be from the end of last year,
+    months away -- `_MAX_PLAUSIBLE_GAP_DAYS` makes the report say
+    "n/a (no prior week yet)" instead of showing a multi-month move
+    formatted like a one-week one
+  - `_MIN_OPEN_INTEREST` was dropped once the ticker allow-list existed --
+    every whitelisted benchmark commodity already clears any reasonable
+    liquidity bar, so a separate threshold added nothing
+- **`prices.py`** -- Yahoo Finance's public, unofficial, no-API-key chart
+  endpoint (`query1.finance.yahoo.com/v8/finance/chart/<ticker>`), plain
+  `requests` through the shared session, no new dependency. Looks up the
+  close at/before each of the two report dates being compared (COT dates are
+  Tuesdays and nearly always trading days, but a holiday can shift things by
+  a day or two, hence the small look-back window) rather than counting
+  trading days back, so the price window always matches the actual
+  positioning window being compared
 - **`notify.py`** -- Gmail SMTP, reading `GMAIL_USER`/`GMAIL_APP_PASSWORD`/`MAIL_TO`
   from the environment (GitHub Actions secrets in CI). Never hardcode these
 - **`.github/workflows/weekly-cot-update.yml`** -- cron `30 21 * * 5` (Friday,

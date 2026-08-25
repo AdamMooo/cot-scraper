@@ -1,20 +1,29 @@
 """
-Positioning analysis for the Legacy Report (Futures Only) COT file.
+Positioning + price analysis for the Legacy Report (Futures Only) COT file.
 
 Scope is deliberately narrow for v1: one report (Legacy, Futures Only), one
-metric (net non-commercial position, its percentile rank against that
-market's own history, and its change from the prior report). This is the
-classic "how crowded is speculative positioning" read; other report types
-(Disaggregated's Managed Money, TFF) can get their own pass later without
-touching this one.
+positioning metric (net non-commercial position, its percentile rank
+against that market's own history, and its change from the prior report),
+compared against what price actually did over the same week
+(prices.py). Comparing the two -- not positioning in isolation -- is the
+actual point: "is speculative positioning stretched, and did price move
+with or against that stretch" is the question a COT reader is usually
+asking.
+
+Which markets get analyzed at all is driven by prices.MARKET_TICKERS, an
+allow-list of benchmark commodities with a real price series, rather than a
+list of things to exclude. Earlier attempts at excluding non-commodities by
+keyword/exchange kept missing cases (rates, FX, equity indices, crypto, and
+~150 thin ICE Futures Energy Div / Nodal Exchange power-grid and
+pipeline-basis contracts all dominated the extremes before this); requiring
+a real ticker is what actually pins the report to "the commodity market"
+and is also what makes the price comparison possible at all.
 
 Column positions below are the Legacy "Futures Only" long-format layout,
 confirmed from a historical year's own header row (every extracted archive
 carries one; the current year's live file does not, but shares the same
 column order) and from CFTC's published variable list at
-HistoricalViewable/cotvariableslegacy.html. Reading positionally rather than
-by header name is what lets the current year's headerless file and each
-historical year's headered file share one code path.
+HistoricalViewable/cotvariableslegacy.html.
 
 Public interface:
     load_category_rows(category_dir) -> {market_name: [(as_of, net_noncommercial, open_interest), ...]}
@@ -24,6 +33,8 @@ Public interface:
 import csv
 from datetime import date
 from pathlib import Path
+
+import prices
 
 _MARKET_COL = 0
 _DATE_COL = 2
@@ -64,70 +75,64 @@ def load_category_rows(category_dir: Path) -> MarketHistory:
     return by_market
 
 
+def merge_current_year_snapshot(snapshot_file: Path, accumulator_file: Path) -> None:
+    """Merge this week's snapshot into the running current-year file this
+    repo keeps for itself.
+
+    CFTC's "current year" text file is only ever this week's single
+    snapshot per market, not a running year-to-date file (confirmed
+    2026-08-25 -- the live deafut.txt has exactly one row per market, the
+    latest). Without this merge, every weekly automated run would overwrite
+    last week's row with this week's, and the current year would never
+    accumulate the history both the percentile ranking and the
+    week-over-week comparison need. Keyed on (market, as_of), so re-running
+    the same week is a no-op and a missed week just leaves a gap rather
+    than breaking anything.
+    """
+    rows: dict[tuple[str, str], list[str]] = {}
+
+    for source in (accumulator_file, snapshot_file):
+        if not source.exists():
+            continue
+        with source.open(encoding="utf-8", errors="replace", newline="") as f:
+            for row in csv.reader(f):
+                if len(row) <= _NC_SHORT_COL:
+                    continue
+                try:
+                    int(row[_OPEN_INTEREST_COL])
+                except ValueError:
+                    continue  # header row
+                rows[(row[_MARKET_COL].strip(), row[_DATE_COL].strip())] = row
+
+    accumulator_file.parent.mkdir(parents=True, exist_ok=True)
+    with accumulator_file.open("w", encoding="utf-8", newline="") as f:
+        writer = csv.writer(f)
+        for key in sorted(rows):
+            writer.writerow(rows[key])
+
+
+# COT reports are weekly; a gap much larger than that between the latest
+# report and the one before it means there IS no real "prior week" yet
+# (e.g. the current year has only ever had one snapshot accumulated so
+# far). Comparing against whatever's technically "previous" in that case --
+# often the last week of the prior year, months away -- would look like a
+# one-week move but actually be a multi-month one, which is worse than not
+# showing a comparison at all.
+_MAX_PLAUSIBLE_GAP_DAYS = 10
+
+
 def _percentile_rank(history_values: list[int], latest: int) -> float:
     """Where the latest value sits versus its own market's full history, 0-100."""
     at_or_below = sum(1 for v in history_values if v <= latest)
     return 100 * at_or_below / len(history_values)
 
 
-_MIN_OPEN_INTEREST = 20_000  # excludes thin/illiquid contracts (small basis, nodal power, micro contracts)
-_HIGHLIGHT_COUNT = 12
-
-# The Legacy report covers every CFTC-regulated future, not just physical
-# commodities -- it's the original report, predating the 2009 Disaggregated
-# split, and still carries rates, FX, equity index, and (more recently)
-# crypto derivatives alongside corn and crude. This is a manually curated
-# exclusion of the non-commodity instruments actually seen in the data as of
-# 2026-08-25, matched case-insensitively as a substring of the market name.
-# Extend it if a new financial product shows up in a future report.
-_NON_COMMODITY_KEYWORDS = [
-    # interest rates
-    "UST ", "T-NOTE", "T-BOND", "SOFR", "FED FUND", "EURODOLLAR", "YIELD",
-    "BUND", "SCHATZ", "BOBL", "OVERNIGHT", "TREASURY", "SHORT TERM RATE",
-    # currencies
-    "EURO FX", "JAPANESE YEN", "BRITISH POUND", "SWISS FRANC",
-    "CANADIAN DOLLAR", "AUSTRALIAN DOLLAR", "NEW ZEALAND DOLLAR", "NZ DOLLAR",
-    "MEXICAN PESO", "BRAZILIAN REAL", "SOUTH AFRICAN RAND", "DOLLAR INDEX",
-    # equity indices
-    "S&P", "NASDAQ", "DOW JONES", "DJIA", "RUSSELL", "NIKKEI", "VIX", "MSCI",
-    "STOCK INDEX", "BLOOMBERG COMMODITY", "BBG COMMODITY",
-    # crypto
-    "BITCOIN", "ETHER", "COINBASE DERIVATIVES", "MICRO SOL",
-]
-
-# These two exchanges list power-grid nodal contracts, pipeline gas-basis
-# differentials, RECs and carbon credits -- real markets, but utility
-# hedging instruments rather than "the commodity market" in the sense this
-# report means. None of the benchmark physical commodities (crude, Henry
-# Hub gas, metals, grains, softs, livestock) trade under either exchange
-# name; they're on CBOT/CME/NYMEX/COMEX/ICE Futures U.S. instead.
-_NON_COMMODITY_EXCHANGES = ["ICE FUTURES ENERGY DIV", "NODAL EXCHANGE"]
-
-
-def _is_commodity(market: str) -> bool:
-    upper = market.upper()
-    if any(exch in upper for exch in _NON_COMMODITY_EXCHANGES):
-        return False
-    return not any(keyword in upper for keyword in _NON_COMMODITY_KEYWORDS)
-
-
-def _table(rows: list[tuple[str, str, int, int, float]]) -> str:
-    lines = ["| Market | As of | Net Non-Commercial | Change vs prior report | Percentile vs history |",
-              "|---|---|---|---|---|"]
-    for market, as_of, net, change, pct in rows:
-        lines.append(f"| {market} | {as_of} | {net:+,} | {change:+,} | {pct:.0f}th |")
-    return "\n".join(lines)
-
-
 def build_report(by_market: MarketHistory, title: str = "Legacy Report (Futures Only)") -> str:
-    """Render a curated highlights summary rather than every market.
+    """Render one markdown table: positioning next to the same week's price move.
 
-    This report alone tracks ~340 markets, most of them thin basis or
-    electricity-node contracts nobody means when they say "the commodity
-    market". _MIN_OPEN_INTEREST filters those out, and the report itself
-    surfaces the extremes (most crowded long/short, biggest movers) rather
-    than a full dump -- the point is "what's worth knowing," not "everything
-    that exists."
+    Only markets with a ticker in prices.MARKET_TICKERS are included (see
+    module docstring for why). Markets with fewer than two dated rows are
+    skipped -- there's no prior week to compare against yet.
     """
     # A market that stopped being reported decades ago still trivially ranks
     # "100th percentile" against its own short, ancient history otherwise --
@@ -135,35 +140,45 @@ def build_report(by_market: MarketHistory, title: str = "Legacy Report (Futures 
     # active and worth surfacing.
     latest_overall = max((h[-1][0] for h in by_market.values() if h), default=None)
 
+    price_cache: dict[str, dict[str, float]] = {}
     rows = []
     for market, history in by_market.items():
-        if len(history) < 2 or history[-1][0] != latest_overall:
+        ticker = prices.ticker_for(market)
+        if ticker is None or len(history) < 2 or history[-1][0] != latest_overall:
             continue
-        latest_date, latest_net, latest_oi = history[-1]
-        if latest_oi < _MIN_OPEN_INTEREST or not _is_commodity(market):
-            continue
+
         nets = [h[1] for h in history]
-        prev_net = history[-2][1]
-        rows.append((market, latest_date, latest_net, latest_net - prev_net, _percentile_rank(nets, latest_net)))
+        latest_date, latest_net, _latest_oi = history[-1]
+        prior_date, prev_net, _prev_oi = history[-2]
+
+        gap_days = (date.fromisoformat(latest_date) - date.fromisoformat(prior_date)).days
+        has_prior_week = gap_days <= _MAX_PLAUSIBLE_GAP_DAYS
+
+        change = latest_net - prev_net if has_prior_week else None
+        price_move = None
+        if has_prior_week:
+            if ticker not in price_cache:
+                price_cache[ticker] = prices.daily_closes(ticker)
+            price_move = prices.price_change(price_cache[ticker], latest_date, prior_date)
+
+        rows.append((market, latest_date, latest_net, change, _percentile_rank(nets, latest_net), price_move))
+
+    rows.sort(key=lambda r: r[4], reverse=True)
 
     lines = [
         f"# COT Weekly Report - {title}",
         "",
         f"Generated {date.today().isoformat()} for the report as of {latest_overall}. "
-        f"{len(rows)} markets with at least {_MIN_OPEN_INTEREST:,} open interest. Percentile is "
-        "versus each market's own full available history; higher means a more crowded net-long "
-        "speculative position.",
+        f"{len(rows)} benchmark commodities tracked. Percentile is versus each market's "
+        "own full available history; higher means a more crowded net-long speculative "
+        "position. Price change covers the same week as the position change.",
         "",
-        "## Most crowded net-long",
-        "",
-        _table(sorted(rows, key=lambda r: r[4], reverse=True)[:_HIGHLIGHT_COUNT]),
-        "",
-        "## Most crowded net-short",
-        "",
-        _table(sorted(rows, key=lambda r: r[4])[:_HIGHLIGHT_COUNT]),
-        "",
-        "## Biggest moves this week",
-        "",
-        _table(sorted(rows, key=lambda r: abs(r[3]), reverse=True)[:_HIGHLIGHT_COUNT]),
+        "| Market | As of | Net Non-Commercial | Change vs prior report | Percentile vs history | Price change (same week) |",
+        "|---|---|---|---|---|---|",
     ]
+    for market, as_of, net, change, pct, price_move in rows:
+        change_cell = f"{change:+,}" if change is not None else "n/a (no prior week yet)"
+        price_cell = f"{price_move[1]:+.1f}%" if price_move else "n/a"
+        lines.append(f"| {market} | {as_of} | {net:+,} | {change_cell} | {pct:.0f}th | {price_cell} |")
+
     return "\n".join(lines)

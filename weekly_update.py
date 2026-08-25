@@ -4,9 +4,12 @@ every Friday, shortly after CFTC's COT release.
 
 Downloads go into .cot-cache/ (gitignored, persisted across runs via GitHub
 Actions cache) so the full historical backfill is only ever fetched once.
-Only the current year's file is copied into data/ (git-tracked) each run,
-which is what keeps the repo itself small: historical years don't change
-once posted, so there's nothing worth committing about them every week.
+The current year is different: CFTC's own current-year file is only ever
+this week's single snapshot per market, not a running year-to-date file, so
+this script merges each week's snapshot into data/<category>/<year>.txt
+(git-tracked) rather than overwriting it -- that accumulated file is what
+gives analysis.py a real week-over-week history for the current year until
+CFTC eventually posts it as a proper historical archive.
 
 v1 scope is one report category (see TARGET_SLUG below). See CLAUDE.md for
 why, and for how to add more categories to this script later.
@@ -48,7 +51,12 @@ def main() -> None:
 
     tracked_dir = DATA_ROOT / category_folder
     tracked_dir.mkdir(parents=True, exist_ok=True)
-    shutil.copy2(current_year_file, tracked_dir / current_year_file.name)
+    tracked_file = tracked_dir / current_year_file.name
+    analysis.merge_current_year_snapshot(current_year_file, tracked_file)
+    # Sync the merged (accumulated) file back over the cache's copy so the
+    # analysis below sees the full current-year history, not just this
+    # week's single-row snapshot that run_download just wrote there.
+    shutil.copy2(tracked_file, current_year_file)
 
     by_market = analysis.load_category_rows(category_dir)
     report_md = analysis.build_report(by_market, title=target["name"])

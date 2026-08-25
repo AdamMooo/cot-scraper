@@ -1,54 +1,32 @@
 # COT Weekly Report - Legacy Report (Futures Only)
 
-Generated 2026-08-25 for the report as of 2026-08-18. 50 markets with at least 20,000 open interest. Percentile is versus each market's own full available history; higher means a more crowded net-long speculative position.
+Generated 2026-08-25 for the report as of 2026-08-18. 26 benchmark commodities tracked. Percentile is versus each market's own full available history; higher means a more crowded net-long speculative position. Price change covers the same week as the position change.
 
-## Most crowded net-long
-
-| Market | As of | Net Non-Commercial | Change vs prior report | Percentile vs history |
-|---|---|---|---|---|
-| COPPER- #1 - COMMODITY EXCHANGE INC. | 2026-08-18 | +79,748 | +19,909 | 100th |
-| WHEAT-HRSpring - MIAX FUTURES EXCHANGE | 2026-08-18 | +11,838 | +27,435 | 100th |
-| STEEL-HRC - COMMODITY EXCHANGE INC. | 2026-08-18 | +9,966 | -95 | 100th |
-| HENRY HUB PENULTIMATE FIN - NEW YORK MERCANTILE EXCHANGE | 2026-08-18 | +11,100 | +46,078 | 99th |
-| CANOLA - ICE FUTURES U.S. | 2026-08-18 | +85,870 | +182,697 | 98th |
-| SOYBEAN MEAL - CHICAGO BOARD OF TRADE | 2026-08-18 | +116,897 | +119,271 | 97th |
-| COTTON NO. 2 - ICE FUTURES U.S. | 2026-08-18 | +107,648 | +138,605 | 97th |
-| SOYBEAN OIL - CHICAGO BOARD OF TRADE | 2026-08-18 | +104,242 | +164,682 | 96th |
-| MINI SOYBEANS - CHICAGO BOARD OF TRADE | 2026-08-18 | +20,822 | +2,924 | 96th |
-| HENRY HUB PENULTIMATE NAT GAS - NEW YORK MERCANTILE EXCHANGE | 2026-08-18 | +1,112 | +23,497 | 90th |
-| GULF COAST CBOB GAS A2 PL RBOB - NEW YORK MERCANTILE EXCHANGE | 2026-08-18 | +815 | -260 | 89th |
-| SOYBEANS - CHICAGO BOARD OF TRADE | 2026-08-18 | +190,961 | +69,150 | 88th |
-
-## Most crowded net-short
-
-| Market | As of | Net Non-Commercial | Change vs prior report | Percentile vs history |
-|---|---|---|---|---|
-| LEAN HOGS - CHICAGO MERCANTILE EXCHANGE | 2026-08-18 | -62,655 | -103,988 | 0th |
-| WTI  HOUSTON ARGUS/WTI TR MO - NEW YORK MERCANTILE EXCHANGE | 2026-08-18 | -70,617 | -62,570 | 0th |
-| MILK, Class III - CHICAGO MERCANTILE EXCHANGE | 2026-08-18 | -8,965 | -1,970 | 0th |
-| NAT GAS NYME - NEW YORK MERCANTILE EXCHANGE | 2026-08-18 | -203,503 | -48,609 | 0th |
-| FEEDER CATTLE - CHICAGO MERCANTILE EXCHANGE | 2026-08-18 | -4,131 | -10,954 | 3th |
-| CRUDE OIL, LIGHT SWEET-WTI - ICE FUTURES EUROPE | 2026-08-18 | -17,451 | -79,989 | 4th |
-| ALUMINUM MWP - COMMODITY EXCHANGE INC. | 2026-08-18 | -541 | +1,850 | 6th |
-| MICRO GOLD - COMMODITY EXCHANGE INC. | 2026-08-18 | -19,291 | +6,112 | 6th |
-| COCOA - ICE FUTURES U.S. | 2026-08-18 | -5,725 | -8,883 | 10th |
-| WTI-PHYSICAL - NEW YORK MERCANTILE EXCHANGE | 2026-08-18 | +122,090 | +57,499 | 11th |
-| CONWAY PROPANE (OPIS) - NEW YORK MERCANTILE EXCHANGE | 2026-08-18 | -486 | -425 | 19th |
-| MT BELVIEU ETHANE OPIS - NEW YORK MERCANTILE EXCHANGE | 2026-08-18 | +1,657 | -6,116 | 20th |
-
-## Biggest moves this week
-
-| Market | As of | Net Non-Commercial | Change vs prior report | Percentile vs history |
-|---|---|---|---|---|
-| CORN - CHICAGO BOARD OF TRADE | 2026-08-18 | +302,142 | +248,950 | 83th |
-| SUGAR NO. 11 - ICE FUTURES U.S. | 2026-08-18 | +77,952 | +215,774 | 43th |
-| CANOLA - ICE FUTURES U.S. | 2026-08-18 | +85,870 | +182,697 | 98th |
-| SOYBEAN OIL - CHICAGO BOARD OF TRADE | 2026-08-18 | +104,242 | +164,682 | 96th |
-| COTTON NO. 2 - ICE FUTURES U.S. | 2026-08-18 | +107,648 | +138,605 | 97th |
-| SOYBEAN MEAL - CHICAGO BOARD OF TRADE | 2026-08-18 | +116,897 | +119,271 | 97th |
-| LEAN HOGS - CHICAGO MERCANTILE EXCHANGE | 2026-08-18 | -62,655 | -103,988 | 0th |
-| CRUDE OIL, LIGHT SWEET-WTI - ICE FUTURES EUROPE | 2026-08-18 | -17,451 | -79,989 | 4th |
-| SOYBEANS - CHICAGO BOARD OF TRADE | 2026-08-18 | +190,961 | +69,150 | 88th |
-| HENRY HUB - NEW YORK MERCANTILE EXCHANGE | 2026-08-18 | +259,621 | +63,990 | 84th |
-| WTI  HOUSTON ARGUS/WTI TR MO - NEW YORK MERCANTILE EXCHANGE | 2026-08-18 | -70,617 | -62,570 | 0th |
-| WTI-PHYSICAL - NEW YORK MERCANTILE EXCHANGE | 2026-08-18 | +122,090 | +57,499 | 11th |
+| Market | As of | Net Non-Commercial | Change vs prior report | Percentile vs history | Price change (same week) |
+|---|---|---|---|---|---|
+| COPPER- #1 - COMMODITY EXCHANGE INC. | 2026-08-18 | +79,748 | n/a (no prior week yet) | 100th | n/a |
+| SOYBEAN MEAL - CHICAGO BOARD OF TRADE | 2026-08-18 | +116,897 | n/a (no prior week yet) | 97th | n/a |
+| COTTON NO. 2 - ICE FUTURES U.S. | 2026-08-18 | +107,648 | n/a (no prior week yet) | 97th | n/a |
+| SOYBEAN OIL - CHICAGO BOARD OF TRADE | 2026-08-18 | +104,242 | n/a (no prior week yet) | 96th | n/a |
+| SOYBEANS - CHICAGO BOARD OF TRADE | 2026-08-18 | +190,961 | n/a (no prior week yet) | 88th | n/a |
+| GOLD - COMMODITY EXCHANGE INC. | 2026-08-18 | +222,189 | n/a (no prior week yet) | 88th | n/a |
+| HENRY HUB - NEW YORK MERCANTILE EXCHANGE | 2026-08-18 | +259,621 | n/a (no prior week yet) | 84th | n/a |
+| CORN - CHICAGO BOARD OF TRADE | 2026-08-18 | +302,142 | n/a (no prior week yet) | 83th | n/a |
+| GASOLINE RBOB - NEW YORK MERCANTILE EXCHANGE | 2026-08-18 | +57,844 | n/a (no prior week yet) | 72th | n/a |
+| WHEAT-HRW - CHICAGO BOARD OF TRADE | 2026-08-18 | +16,074 | n/a (no prior week yet) | 68th | n/a |
+| LIVE CATTLE - CHICAGO MERCANTILE EXCHANGE | 2026-08-18 | +39,584 | n/a (no prior week yet) | 67th | n/a |
+| PLATINUM - NEW YORK MERCANTILE EXCHANGE | 2026-08-18 | +13,039 | n/a (no prior week yet) | 64th | n/a |
+| ROUGH RICE - CHICAGO BOARD OF TRADE | 2026-08-18 | +605 | n/a (no prior week yet) | 61th | n/a |
+| COFFEE C - ICE FUTURES U.S. | 2026-08-18 | +30,365 | n/a (no prior week yet) | 59th | n/a |
+| WHEAT-SRW - CHICAGO BOARD OF TRADE | 2026-08-18 | -18,765 | n/a (no prior week yet) | 53th | n/a |
+| NY HARBOR ULSD - NEW YORK MERCANTILE EXCHANGE | 2026-08-18 | +13,879 | n/a (no prior week yet) | 46th | n/a |
+| SILVER - COMMODITY EXCHANGE INC. | 2026-08-18 | +23,625 | n/a (no prior week yet) | 46th | n/a |
+| SUGAR NO. 11 - ICE FUTURES U.S. | 2026-08-18 | +77,952 | n/a (no prior week yet) | 43th | n/a |
+| COCOA - ICE FUTURES U.S. | 2026-08-18 | -5,725 | n/a (no prior week yet) | 10th | n/a |
+| PALLADIUM - NEW YORK MERCANTILE EXCHANGE | 2026-08-18 | -4,398 | n/a (no prior week yet) | 7th | n/a |
+| MICRO GOLD - COMMODITY EXCHANGE INC. | 2026-08-18 | -19,291 | n/a (no prior week yet) | 6th | n/a |
+| CRUDE OIL, LIGHT SWEET-WTI - ICE FUTURES EUROPE | 2026-08-18 | -17,451 | n/a (no prior week yet) | 4th | n/a |
+| FEEDER CATTLE - CHICAGO MERCANTILE EXCHANGE | 2026-08-18 | -4,131 | n/a (no prior week yet) | 3th | n/a |
+| NAT GAS NYME - NEW YORK MERCANTILE EXCHANGE | 2026-08-18 | -203,503 | n/a (no prior week yet) | 0th | n/a |
+| MILK, Class III - CHICAGO MERCANTILE EXCHANGE | 2026-08-18 | -8,965 | n/a (no prior week yet) | 0th | n/a |
+| LEAN HOGS - CHICAGO MERCANTILE EXCHANGE | 2026-08-18 | -62,655 | n/a (no prior week yet) | 0th | n/a |
