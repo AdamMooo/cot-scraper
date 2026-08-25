@@ -1,0 +1,52 @@
+name: Weekly COT update
+
+# CFTC releases the COT report at 3:30pm ET every Friday. 21:30 UTC is at
+# least an hour after that regardless of daylight saving (19:30-20:30 UTC
+# depending on the time of year), with room to spare. workflow_dispatch
+# lets you trigger a re-run by hand if a holiday shifts CFTC's own schedule.
+on:
+  schedule:
+    - cron: "30 21 * * 5"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      # Historical years are immutable once CFTC posts them, so once this
+      # cache is populated it's restored as-is every run and never re-saved
+      # (actions/cache only saves on a cache-key miss). Only the current
+      # year is re-downloaded every run regardless of the cache -- see
+      # downloader.py's skip-if-exists exception for extract=False entries.
+      - name: Cache historical archives
+        uses: actions/cache@v4
+        with:
+          path: .cot-cache
+          key: cot-cache-v1
+
+      - name: Run weekly update
+        env:
+          GMAIL_USER: ${{ secrets.GMAIL_USER }}
+          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+          MAIL_TO: ${{ secrets.MAIL_TO }}
+        run: python weekly_update.py
+
+      - name: Commit updated data and report
+        run: |
+          git config user.name "cot-scraper bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add data/ reports/
+          git diff --cached --quiet || git commit -m "Weekly COT update $(date -u +%Y-%m-%d)"
+          git push

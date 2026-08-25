@@ -1,84 +1,107 @@
 """
-Minimal Next.js JSON feed client for one website.
+CFTC Commitments of Traders (COT) report categories and their download URLs.
+
+Unlike the fund site this tool started from, there is no per-item webpage to
+fetch and no slug space to discover from a sitemap: CFTC publishes the same
+seven report categories on two static pages, and both the current-week URL
+and the historical zip-file naming for each were confirmed against the live
+pages on 2026-08-25 (link text and section headings, not guessed from
+filenames). That taxonomy is fixed the same way fund_data.BASE is fixed on
+the original site -- it only needs updating if CFTC adds or retires a report
+category, not on every run.
+
+What *is* rediscovered every run is which years actually have a historical
+archive, by scraping HistoricalCompressed/index.htm fresh each time. The
+current year is always served from the live current-week file, not a zip,
+even when a same-year zip also exists -- CFTC keeps the current-week file
+continuously up to date, so it is the fresher of the two.
 
 Public interface:
-    BASE                       -- site root, taken from site_config
-    NotAFundPage               -- raised for /funds/ URLs that aren't funds
-    discover_build_id()        -> str
-    fetch_fund(build_id, slug) -> dict  (pageProps.fundData)
-
-The site's buildId rotates on every deploy, so it is rediscovered per run and
-never hardcoded. Page URLs can also start redirecting when the site renames
-something, so fetch_fund follows the redirect rather than giving up. Both behaviours matter because this tool ships without a maintainer.
+    BASE                        -- site root, taken from site_config
+    CATEGORIES                  -- (slug, name, current_path, hist_prefix) tuples
+    NotAFundPage                -- raised for an unrecognised category slug
+    discover_build_id()         -> str  (fetches and caches the historical page)
+    fetch_fund(build_id, slug)  -> dict (name, series, documents.fund)
 """
 
-import json
 import re
+from datetime import date
 
 import site_config
 from http_client import get_session
 
 BASE = site_config.SITE_BASE
 
-_ITEM_PATH_RE = re.compile(re.escape(site_config.ITEM_PATH) + r"([a-z0-9-]+)")
-_MAX_REDIRECTS = 3
+_HISTORICAL_PAGE = BASE + "/MarketReports/CommitmentsofTraders/HistoricalCompressed/index.htm"
+
+# The historical prefix is matched as "<prefix>_?(\d{4})\.zip". CFTC is
+# inconsistent about the underscore before the year (deahistfo_1995.zip vs
+# deahistfo2004.zip) but always keeps a bare 4-digit year right before
+# ".zip", which conveniently also excludes the bundled multi-year archives
+# (e.g. deacot1986_2016.zip, dea_cit_txt_2006_2016.zip): the digits there are
+# followed by another "_", not ".zip", so they never match.
+CATEGORIES = [
+    ("legacy_futures_only", "Legacy Report (Futures Only)",
+     "/dea/newcot/deafut.txt", "/files/dea/history/deacot"),
+    ("legacy_combined", "Legacy Report (Futures and Options Combined)",
+     "/dea/newcot/deacom.txt", "/files/dea/history/deahistfo"),
+    ("disaggregated_futures_only", "Disaggregated Report (Futures Only)",
+     "/dea/newcot/f_disagg.txt", "/files/dea/history/fut_disagg_txt_"),
+    ("disaggregated_combined", "Disaggregated Report (Futures and Options Combined)",
+     "/dea/newcot/c_disagg.txt", "/files/dea/history/com_disagg_txt_"),
+    ("tff_futures_only", "Traders in Financial Futures Report (Futures Only)",
+     "/dea/newcot/FinFutWk.txt", "/files/dea/history/fut_fin_txt_"),
+    ("tff_combined", "Traders in Financial Futures Report (Futures and Options Combined)",
+     "/dea/newcot/FinComWk.txt", "/files/dea/history/com_fin_txt_"),
+    ("supplemental_cit", "Supplemental Report (Commodity Index Traders)",
+     "/dea/newcot/deacit.txt", "/files/dea/history/dea_cit_txt_"),
+]
+_BY_SLUG = {slug: (name, current_path, hist_prefix) for slug, name, current_path, hist_prefix in CATEGORIES}
+
+_cache: dict[str, str] = {}
 
 
 class NotAFundPage(Exception):
-    """A /funds/ URL that doesn't serve fund data (marketing page, retired fund)."""
+    """Raised for a category slug this build doesn't know about."""
 
 
-def _get(url: str) -> bytes:
+def _get_text(url: str) -> str:
     resp = get_session().get(url, timeout=30)
     resp.raise_for_status()
-    return resp.content
+    return resp.content.decode("utf-8", "replace")
 
 
 def discover_build_id() -> str:
-    """Discover the current Next.js buildId from the homepage HTML.
+    """Fetch and cache the historical archive page.
 
-    The regex runs on a fresh GET each call; no hardcoded hash is ever stored.
+    Called once at the start of a run (index build or download) so every
+    category sees one consistent snapshot of what years are available,
+    rather than each category re-fetching the same page separately.
     """
-    html = _get(BASE + "/").decode("utf-8", "replace")
-    m = re.search(r'"buildId":"([^"]+)"', html)
-    if not m:
-        raise RuntimeError(f"Could not find buildId on {site_config.SITE_NAME}")
-    return m.group(1)
+    _cache["historical"] = _get_text(_HISTORICAL_PAGE)
+    return "cftc"  # no real build id on this site; kept for interface parity
 
 
 def fetch_fund(build_id: str, slug: str) -> dict:
-    """Return pageProps.fundData for a fund, following fund-to-fund redirects.
+    """Return a fund-shaped payload: name, empty series, and a document dict
+    of {year_string: {"url", "extract"}} under documents.fund.
 
-    A renamed fund's old URL answers with a Next.js redirect instead of fund
-    data. When that redirect points at another /funds/ page, it is followed so
-    the fund is still found under its new slug. Redirects to anywhere else
-    (a marketing page, the fund listing) mean this URL is not a fund, which
-    raises NotAFundPage so callers can report it rather than treat it as an
-    unexplained failure.
+    "extract" marks a historical year as a zip that needs its one .txt
+    member pulled out, versus the current year's plain text file.
     """
-    seen: set[str] = set()
+    entry = _BY_SLUG.get(slug)
+    if entry is None:
+        raise NotAFundPage(f"unknown report category '{slug}'")
+    name, current_path, hist_prefix = entry
 
-    for _ in range(_MAX_REDIRECTS):
-        if slug in seen:
-            raise NotAFundPage(f"redirect loop at '{slug}'")
-        seen.add(slug)
+    if "historical" not in _cache:
+        discover_build_id()
 
-        url = (
-            f"{BASE}/_next/data/{build_id}/en-CA"
-            f"{site_config.ITEM_PATH}{slug}.json?id={slug}"
-        )
-        page_props = json.loads(_get(url).decode("utf-8", "replace")).get("pageProps", {})
+    documents: dict[str, dict] = {}
+    pattern = re.compile(re.escape(hist_prefix) + r"_?(\d{4})\.zip")
+    for match in pattern.finditer(_cache["historical"]):
+        documents[match.group(1)] = {"url": BASE + match.group(0), "extract": True}
 
-        if "fundData" in page_props:
-            return page_props["fundData"]
+    documents[str(date.today().year)] = {"url": BASE + current_path, "extract": False}
 
-        target = page_props.get("__N_REDIRECT")
-        if not target:
-            raise NotAFundPage(f"no fund data at '{slug}'")
-
-        match = _ITEM_PATH_RE.search(target)
-        if not match:
-            raise NotAFundPage(f"'{slug}' redirects to '{target}', not a fund page")
-        slug = match.group(1)
-
-    raise NotAFundPage(f"too many redirects starting from '{slug}'")
+    return {"name": name, "series": {}, "documents": {"fund": documents}}

@@ -1,80 +1,83 @@
 # cot-scraper
 
-A base for building small, shareable Windows apps that pull every document off
-a website's pages and file them one folder per page.
+A Windows app that downloads every CFTC Commitments of Traders (COT) report,
+current week plus the full historical archive back to whenever each report
+type started, filed one folder per report category, one plain `.txt` file
+per year. Built for someone later lining these up against price data, not
+just reading the current week.
 
-The point of it is the packaging and the durability, not the scraping. It builds
-to a single `.exe` you can hand to somebody non-technical, it needs no Python or
-credentials on their machine, and it is written to keep working for a long time
-with nobody maintaining it.
+It builds to a single `.exe` you can hand to somebody non-technical, needs no
+Python or credentials on their machine, and is written to keep working for a
+long time with nobody maintaining it. Forked from a small internal base kit
+for this exact shape of tool (search box, tick boxes, progress bar, log,
+skip-what's-already-there, remembered download folder).
 
 ![the frog](app_icon.ico)
 
 ## What you get
 
-- A window with a search box, tick boxes, a progress bar and a log.
-- The list of pages is read from the site **every launch**, never hardcoded, so
-  new pages appear on their own and raise a banner naming them.
-- Every document on each page is downloaded, whatever is posted that day. There
-  is no fixed list of document types to keep in step with the site.
-- Re-runs skip what is already on disk, and anything already downloaded is
-  marked "saved" in the list.
-- The download folder is chosen by the user and remembered, so it can point at a
-  synced SharePoint or OneDrive folder and sync onward from there.
-- Start Menu shortcut creation, so it can be pinned to the taskbar.
+Seven report categories, each a folder, each containing one `.txt` file per
+year plus the current year:
 
-## Pointing it at a different site
+- Legacy Report (Futures Only / Futures and Options Combined)
+- Disaggregated Report (Futures Only / Futures and Options Combined)
+- Traders in Financial Futures Report (Futures Only / Futures and Options Combined)
+- Supplemental Report (Commodity Index Traders)
 
-Start with `site_config.py`. For a site that, like the one this was written
-against, is a Next.js app serving its pages from a JSON data endpoint, that file
-plus nothing else may be enough:
+For each ticked category: every year CFTC has published a historical archive
+for, from 1986 (Legacy) or later (the newer report types only go back to
+2006-2010), plus the current year. The current year always comes from CFTC's
+live, continuously-updated current-week file rather than that year's zip
+archive, since the zip is not guaranteed to be as fresh.
 
-```python
-SITE_BASE = "https://www.example.com"
-SITE_NAME = "example.com"
-ITEM_PATH = "/funds/"          # pages live at SITE_BASE + ITEM_PATH + "<slug>"
-APP_NAME  = "Document Downloader"
-ITEM_WORD, ITEM_WORD_PL = "fund", "funds"
-```
+Re-runs skip years already on disk. The download folder is chosen once and
+remembered.
 
-For any other kind of site, three functions carry all the remaining assumptions:
+## Why this differs from the base kit it's forked from
 
-| Function | Assumes | Change it when |
-|---|---|---|
-| `fund_data.discover_build_id` | Next.js, with a rotating `buildId` in the homepage HTML | The site is not Next.js. Delete it and its argument |
-| `fund_data.fetch_fund` | `"/_next/data/<buildId>/en-CA<ITEM_PATH><slug>.json"` returns `pageProps.fundData` | Always, unless the site matches that shape |
-| `fund_index._fetch_entry` | The payload has `name` and `series[].code` | The payload names things differently |
-| `downloader._process_fund` | Documents live at `documents.fund` in the payload, as `{key: {url}}` | The payload nests documents elsewhere |
+CFTC is a static site, not a Next.js JSON feed: there's no per-page endpoint
+to poll and no sitemap of "items" to crawl. The site publishes the same seven
+report categories on two fixed pages, confirmed against the live pages'
+section headings and link text (not guessed from filenames) on 2026-08-25.
+That's why `fund_data.CATEGORIES` is a short hardcoded table rather than
+something crawled — CFTC's report taxonomy essentially doesn't change,
+unlike a fund roster. What *is* still rediscovered fresh every run is which
+years actually have an archive, by scraping
+`HistoricalCompressed/index.htm` each time (`fund_data.fetch_fund`).
 
-`downloader._DOC_NAMES` maps the site's internal document keys to readable
-filenames. It is only cosmetic: unmapped keys fall back to a title-cased version
-of the key, so a partial map is fine and a new document type never needs code.
+Historical years arrive as a `.zip` with one `.txt` inside; `downloader.py`
+extracts it and saves the plain text, so nothing needs manual unzipping
+before it's usable. `downloader._DOC_NAMES` and `_ACRONYMS` are empty here —
+document keys are just year strings, and those already read fine as-is.
 
-Everything else is site-agnostic and worth leaving alone: the GUI, the download
-engine, settings, paths, retrying, the icon and the frog.
+## Weekly automation
 
-## Why it should keep working
+`weekly_update.py` + `.github/workflows/weekly-cot-update.yml` run this unattended
+every Friday via GitHub Actions: download the current year's Legacy (Futures Only)
+report, extend the historical cache, compute positioning highlights (`analysis.py`),
+commit the updated current-year file and the new report to the repo, and email the
+report (`notify.py`, Gmail SMTP). See `CLAUDE.md` for the analysis scope and the
+non-commodity exclusion list, and `weekly_update.py`'s own docstring for the
+cache-vs-tracked-data split.
 
-Written on the assumption that nobody will patch it after handover:
+### One-time setup
 
-- **It reads the site's own data feed**, not the rendered HTML. A visual
-  redesign does not break it, and there is no browser driver to keep in step
-  with a browser version.
-- **Two independent ways to find pages.** The sitemap first, then scraping the
-  site's own links. Losing one does not stop it.
-- **Renames are followed.** A page that starts redirecting is followed to its
-  new home; a redirect out of the section is reported as "not one of these
-  pages" rather than as a mystery failure.
-- **A bad refresh cannot destroy a good list.** If a refresh returns
-  implausibly little, the last known-good list is kept and the user is told.
-- **Retries with backoff** on every request.
-- **Failures stay visible.** "No documents anywhere" is counted separately from
-  "already downloaded", so a site change can never read as "nothing new today".
-- **Interrupted downloads cannot be mistaken for finished ones.** Files are
-  written as `.part` and renamed only once complete.
-- **One page failing never ends the batch.**
-- **Values from the site are sanitised before becoming file paths**, so a
-  hostile or malformed key cannot write outside the download folder.
+Needs three GitHub Actions secrets on this repo, set once from your own terminal
+(not something to script into the repo, since it's your Gmail credential):
+
+1. Create a Google App Password at <https://myaccount.google.com/apppasswords>
+   (needs 2FA already enabled on the Google account sending the mail).
+2. Set the three secrets:
+   ```
+   gh secret set GMAIL_USER --repo AdamMooo/cot-scraper --body "your-gmail-address@gmail.com"
+   gh secret set GMAIL_APP_PASSWORD --repo AdamMooo/cot-scraper
+   gh secret set MAIL_TO --repo AdamMooo/cot-scraper --body "Adam.Morris0201@gmail.com"
+   ```
+   The middle one is left without `--body` on purpose — run it, then paste the app
+   password when it waits for input, so it never lands in shell history.
+3. Push this repo to `AdamMooo/cot-scraper` (it currently only exists locally with
+   these changes). `workflow_dispatch` is enabled, so you can trigger a test run
+   from the Actions tab immediately rather than waiting for Friday.
 
 ## Running and building
 
@@ -91,12 +94,28 @@ python -m venv .venv
 `generate_icon.py` to redraw `app_icon.ico`, and `build_exe.py` passes
 `--exclude-module PIL` so it can never end up inside the shipped `.exe`.
 
+## Why it should keep working
+
+- **Retries with backoff** on every request (`http_client.py`).
+- **A bad refresh cannot destroy a good list.** If discovering the category
+  list fails outright, the last known-good list is kept.
+- **Interrupted downloads cannot be mistaken for finished ones.** Files are
+  written as `.part` and renamed only once complete — this covers the
+  zip-extraction path too, since the final `.txt` is only written after the
+  zip has been fully downloaded and read.
+- **One category failing never ends the batch.**
+- **Bundled multi-year archives are skipped automatically.** CFTC also
+  publishes a few multi-year "hist" zips (e.g. `deacot1986_2016.zip`) that
+  duplicate data already in the per-year files; the year-matching pattern in
+  `fund_data.py` only matches a bare 4-digit year immediately before `.zip`,
+  which these bundles never are, so they're never fetched.
+
 ## Sharing the .exe
 
 It is unsigned, so Windows SmartScreen shows "Windows protected your PC" on
-first run and the recipient has to click More info, then Run anyway. Tell them
-that up front. Slack usually carries an `.exe` fine; Exchange strips it from
-email, so use a link if Slack is blocked.
+first run and the recipient has to click More info, then Run anyway. Tell
+them that up front. Slack usually carries an `.exe` fine; Exchange strips it
+from email, so use a link if Slack is blocked.
 
 ## Notes
 
@@ -104,7 +123,9 @@ email, so use a link if Slack is blocked.
   the hidden-file attribute.
 - The app writes only beside its own executable: a hidden `App Files` folder
   holding the saved list and the chosen download folder.
-- The icon is pixel art deliberately. A taskbar icon is 24 physical pixels wide,
-  and smoothly drawn art at that size smears; art authored on the pixel grid and
-  scaled by whole numbers stays sharp. `generate_icon.py` renders each icon size
-  separately for the same reason.
+- Text format only. No `.xls`/`.xlsx` variants are downloaded (deliberate —
+  CFTC offers both for every category; text is smaller and easier to load
+  into pandas/Excel later).
+- The icon is pixel art deliberately. A taskbar icon is 24 physical pixels
+  wide, and smoothly drawn art at that size smears; art authored on the pixel
+  grid and scaled by whole numbers stays sharp.

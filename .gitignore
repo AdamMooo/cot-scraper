@@ -7,3 +7,8 @@ dist/
 # What the app itself writes when you run it from the project folder.
 App Files/
 Fund Documents/
+
+# Full historical download cache for weekly_update.py -- gitignored on
+# purpose. Restored across CI runs via actions/cache instead of being
+# committed; see .github/workflows/weekly-cot-update.yml.
+.cot-cache/
