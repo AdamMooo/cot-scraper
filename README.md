@@ -1,4 +1,4 @@
-# web-scraper
+# cot-scraper
 
 A base for building small, shareable Windows apps that pull every document off
 a website's pages and file them one folder per page.
