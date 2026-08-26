@@ -1,51 +1,255 @@
 {
-  "generated": "2026-08-25",
+  "generated": "2026-08-26",
   "entry_lag_weeks": 1,
   "robustness": [
     {
-      "spec": "Quintiles instead of terciles",
-      "why": "a monotonic signal should sharpen, not blur, under a more extreme sort",
-      "weeks": 1348,
-      "mean_weekly_spread": 0.0010949278224121688,
-      "annualised": 0.05693624676543278,
-      "p_value": 0.1736
+      "spec": "Vol-scaled legs (risk parity)",
+      "tests": "effect size",
+      "why": "removes the volatility tilt; the control row below is the matched comparison",
+      "weeks": 1315,
+      "mean_weekly_spread": 0.0009589740648769022,
+      "annualised": 0.049866651373598914,
+      "p_value": 0.146
     },
     {
-      "spec": "Weekly returns clipped at +/-10%",
-      "why": "tests whether a few large moves carry the result",
+      "spec": "Equal-weighted, same weeks as above",
+      "tests": "effect size",
+      "why": "control for the risk-parity row, so the two differ only by weighting",
+      "weeks": 1315,
+      "mean_weekly_spread": 0.0012644944338526447,
+      "annualised": 0.06575371056033752,
+      "p_value": 0.03
+    },
+    {
+      "spec": "Ex roll-contaminated (3 contracts)",
+      "tests": "effect size",
+      "why": "drops the series roll_check flags; tests the original prime suspect",
+      "weeks": 1348,
+      "mean_weekly_spread": 0.001205707157854439,
+      "annualised": 0.06269677220843083,
+      "p_value": 0.0374
+    },
+    {
+      "spec": "Returns winsorised at +/-10% (4% of obs)",
+      "tests": "effect size",
+      "why": "genuine outlier trim: it binds on few enough observations to stay comparable",
       "weeks": 1348,
       "mean_weekly_spread": 0.0009743735016401223,
       "annualised": 0.05066742208528636,
-      "p_value": 0.0566
+      "p_value": 0.0584
     },
     {
-      "spec": "Weekly returns clipped at +/-5%",
-      "why": "same, more aggressively",
+      "spec": "Quintiles instead of terciles",
+      "tests": "power",
+      "why": "a quintile leg holds ~4 names against a tercile's ~8, so it is less diversified and noisier; a flat mean with a worse p is expected",
       "weeks": 1348,
-      "mean_weekly_spread": 0.00035408747252125845,
-      "annualised": 0.018412548571105438,
-      "p_value": 0.3806
+      "mean_weekly_spread": 0.0010949278224121688,
+      "annualised": 0.05693624676543278,
+      "p_value": 0.1792
     },
     {
       "spec": "First half (2000-03 to 2013-01)",
-      "why": "out-of-sample stability",
+      "tests": "power",
+      "why": "halving the sample multiplies the standard error by ~sqrt(2)",
       "weeks": 674,
       "mean_weekly_spread": 0.001100985251145923,
       "annualised": 0.05725123305958799,
-      "p_value": 0.1866
+      "p_value": 0.179
     },
     {
       "spec": "Second half (2013-01 to 2025-12)",
-      "why": "out-of-sample stability",
+      "tests": "power",
+      "why": "same; compare the two halves' MEANS to each other, not their p-values to 0.05",
       "weeks": 674,
       "mean_weekly_spread": 0.001162746456358889,
       "annualised": 0.06046281573066222,
-      "p_value": 0.1396
+      "p_value": 0.1484
+    },
+    {
+      "spec": "Returns clipped at +/-5% (19% of obs)",
+      "tests": "distorted",
+      "why": "binds on too much of the data to be an outlier test; it compresses the whole distribution in the volatile half of the universe",
+      "weeks": 1348,
+      "mean_weekly_spread": 0.00035408747252125845,
+      "annualised": 0.018412548571105438,
+      "p_value": 0.3844
     }
   ],
-  "robustness_specs_significant": 0,
-  "robustness_specs_total": 5,
-  "verdict": "fragile",
+  "robustness_effect_size_specs": 4,
+  "robustness_effect_size_significant": 2,
+  "robustness_specs_total": 8,
+  "jackknife": [
+    {
+      "dropped": "Coffee",
+      "weeks": 1339,
+      "mean_weekly_spread": 0.001062728453405753,
+      "annualised": 0.05526187957709916,
+      "p_value": 0.083
+    },
+    {
+      "dropped": "Lean Hogs",
+      "weeks": 1348,
+      "mean_weekly_spread": 0.0012175688496908561,
+      "annualised": 0.06331358018392452,
+      "p_value": 0.048
+    },
+    {
+      "dropped": "Wheat (SRW)",
+      "weeks": 1348,
+      "mean_weekly_spread": 0.001254403260348043,
+      "annualised": 0.06522896953809823,
+      "p_value": 0.0425
+    },
+    {
+      "dropped": "Gold",
+      "weeks": 1348,
+      "mean_weekly_spread": 0.0012625773575766991,
+      "annualised": 0.06565402259398835,
+      "p_value": 0.041
+    },
+    {
+      "dropped": "Silver",
+      "weeks": 1348,
+      "mean_weekly_spread": 0.0012471768891475173,
+      "annualised": 0.0648531982356709,
+      "p_value": 0.0385
+    },
+    {
+      "dropped": "Copper",
+      "weeks": 1348,
+      "mean_weekly_spread": 0.0012696290709299262,
+      "annualised": 0.06602071168835616,
+      "p_value": 0.038
+    },
+    {
+      "dropped": "Class III Milk",
+      "weeks": 1348,
+      "mean_weekly_spread": 0.0013439485823404946,
+      "annualised": 0.06988532628170571,
+      "p_value": 0.0335
+    },
+    {
+      "dropped": "WTI Crude",
+      "weeks": 1348,
+      "mean_weekly_spread": 0.0013116924236915596,
+      "annualised": 0.0682080060319611,
+      "p_value": 0.0315
+    },
+    {
+      "dropped": "Rough Rice",
+      "weeks": 1339,
+      "mean_weekly_spread": 0.0013239082238635674,
+      "annualised": 0.0688432276409055,
+      "p_value": 0.03
+    },
+    {
+      "dropped": "Platinum",
+      "weeks": 1339,
+      "mean_weekly_spread": 0.001331218301008651,
+      "annualised": 0.06922335165244986,
+      "p_value": 0.0265
+    },
+    {
+      "dropped": "Soybean Meal",
+      "weeks": 1348,
+      "mean_weekly_spread": 0.0013884038929635226,
+      "annualised": 0.07219700243410318,
+      "p_value": 0.0255
+    },
+    {
+      "dropped": "Soybean Oil",
+      "weeks": 1339,
+      "mean_weekly_spread": 0.0013946056565825597,
+      "annualised": 0.07251949414229311,
+      "p_value": 0.0235
+    },
+    {
+      "dropped": "Palladium",
+      "weeks": 1339,
+      "mean_weekly_spread": 0.0014646960778035162,
+      "annualised": 0.07616419604578284,
+      "p_value": 0.0215
+    },
+    {
+      "dropped": "Feeder Cattle",
+      "weeks": 1348,
+      "mean_weekly_spread": 0.0014277539446162345,
+      "annualised": 0.0742432051200442,
+      "p_value": 0.0205
+    },
+    {
+      "dropped": "RBOB Gasoline",
+      "weeks": 1348,
+      "mean_weekly_spread": 0.0013688055219972545,
+      "annualised": 0.07117788714385724,
+      "p_value": 0.0195
+    },
+    {
+      "dropped": "Cotton",
+      "weeks": 1339,
+      "mean_weekly_spread": 0.0015417134838124152,
+      "annualised": 0.08016910115824559,
+      "p_value": 0.0165
+    },
+    {
+      "dropped": "NY Harbor ULSD",
+      "weeks": 1348,
+      "mean_weekly_spread": 0.0014841687448448313,
+      "annualised": 0.07717677473193123,
+      "p_value": 0.0135
+    },
+    {
+      "dropped": "Wheat (HRW)",
+      "weeks": 1348,
+      "mean_weekly_spread": 0.0016333022602601993,
+      "annualised": 0.08493171753353036,
+      "p_value": 0.0125
+    },
+    {
+      "dropped": "Live Cattle",
+      "weeks": 1348,
+      "mean_weekly_spread": 0.0014964325695285892,
+      "annualised": 0.07781449361548665,
+      "p_value": 0.012
+    },
+    {
+      "dropped": "Natural Gas",
+      "weeks": 1348,
+      "mean_weekly_spread": 0.0015144488520249374,
+      "annualised": 0.07875134030529675,
+      "p_value": 0.0115
+    },
+    {
+      "dropped": "Soybeans",
+      "weeks": 1348,
+      "mean_weekly_spread": 0.0015537215146012287,
+      "annualised": 0.0807935187592639,
+      "p_value": 0.0115
+    },
+    {
+      "dropped": "Corn",
+      "weeks": 1348,
+      "mean_weekly_spread": 0.0016416109390962174,
+      "annualised": 0.08536376883300331,
+      "p_value": 0.0095
+    },
+    {
+      "dropped": "Cocoa",
+      "weeks": 1339,
+      "mean_weekly_spread": 0.0016998009728265353,
+      "annualised": 0.08838965058697984,
+      "p_value": 0.008
+    },
+    {
+      "dropped": "Sugar",
+      "weeks": 1339,
+      "mean_weekly_spread": 0.0017781732941183094,
+      "annualised": 0.09246501129415209,
+      "p_value": 0.0045
+    }
+  ],
+  "jackknife_specs_above_05": 1,
+  "verdict": "explained by a volatility tilt, not positioning",
   "question": "Do the least-crowded commodities outperform the most-crowded, week to week?",
   "portfolio": "equal-weighted terciles, long lowest positioning percentile, short highest",
   "hold_weeks": 1,
@@ -61,5 +265,19 @@
   "annualised_spread": 0.05885702439512511,
   "annualised_vol": 0.17973711917580032,
   "sharpe_like": 0.3274617099963488,
+  "ic_weeks": 1347,
+  "ic_mean": -0.004875124468750555,
+  "ic_sd": 0.24101920175310296,
+  "ic_annualised_ir": -0.14585984119518783,
+  "ic_p_value": 0.4176,
+  "vol_gap_weeks": 1315,
+  "vol_gap_mean": 0.003670665397501363,
+  "vol_gap_p_value": 0.0,
+  "vol_gap_positive_weeks_pct": 68.66920152091255,
+  "tail_weeks": 20,
+  "tail_net": -0.207928867077393,
+  "tail_largest_week": 0.1616052717928524,
+  "tail_most_negative_week": -0.16228134325867877,
+  "series_total": 1.5257551708582433,
   "caveat": "price-only returns, excludes roll yield and costs; measures information, not tradability"
 }

@@ -22,11 +22,14 @@ which have to be set from Adam's own terminal -- credential setup Claude won't d
 
 The download/report half is finished. The research half is settled too, in the negative:
 the positioning signal was tested three ways and the one nominally-significant result turns
-out to be a volatility tilt rather than a signal. Two estimators in `cross_section.py`
-(`spearman_ic`, `vol_scaled_leg`) are deliberately left as `NotImplementedError` holes for
-Adam to write -- the scaffolding, plumbing and writeup around them are done and validated,
-so the file does not run until those two are filled. Nothing imports `cross_section`, so
-the Friday automation is unaffected.
+out to be a volatility tilt rather than a signal. `cross_section.py` runs end to end as of
+2026-08-26 -- the two estimator holes (`spearman_ic`, `vol_scaled_leg`) are filled and the
+diagnosis reproduces from source, so `research/CROSS-SECTION.md` and `cross_section.json`
+are now generated output rather than a writeup ahead of its own code. Nothing imports
+`cross_section`, so the Friday automation was never affected either way.
+
+The remaining open item is the Managed Money (Disaggregated, 2009-present) cross-sectional
+test, which is a fresh experiment rather than unfinished work.
 
 ## Handoff Notes
 
@@ -42,6 +45,26 @@ data" turned out to be the real ask, not just downloading. Text-only stuck throu
 (smaller, pandas-ready).
 
 ## Recent Changes
+
+- 2026-08-26 (the analysis now runs from source): Wrote the two estimators the previous
+  session had left as deliberate holes -- `spearman_ic` (tie-corrected Spearman via average
+  ranks, returning `None` rather than 0 when a rank vector is constant, since folding an
+  undefined correlation in as zero would bias the mean IC toward the null) and
+  `vol_scaled_leg` -- and regenerated `research/CROSS-SECTION.md` + `.json`, which had been
+  stale output from the *pre-diagnosis* run still saying "0 of 5 specs survive, fragile".
+  Every headline figure the docs had recorded in advance reproduced: mean IC -0.0049
+  (p=0.418), leg vol gap +0.37pp/wk (p=0.000), verdict "explained by a volatility tilt, not
+  positioning". Bootstrap-noise-level drift on a handful of secondary p-values was synced
+  into `CLAUDE.md` (e.g. Coffee's jackknife 0.104 -> 0.083, so 23 of 24 single-name drops
+  hold rather than 22), and **one real error was found in the docs**: the "largest weeks net
+  against the effect" angle had been written as "+16.2% and -16.2% ... largely cancel", which
+  are the largest single positive and negative weeks and are near-mirror images by
+  construction, saying nothing about the tail's contribution. The actual figure is that the
+  20 biggest weeks by magnitude net **-20.8%** against a series total of +152.6%. That angle
+  is now computed (`_tail_contribution`) rather than asserted, so it cannot rot again --
+  which is the same lesson as the robustness-table misreading: a number quoted in prose and
+  not produced by the script is a number nobody is checking. Only 2 of 4 effect-size specs
+  clear p<0.05, not the 3 that had been expected.
 
 - 2026-08-25 (diagnosis, and a correction to the same day's own conclusions): Re-audited the
   cross-sectional result instead of accepting it, and the verdict survived while the reasoning
@@ -72,7 +95,9 @@ data" turned out to be the real ask, not just downloading. Text-only stuck throu
   least-crowded / short most-crowded) buys real power -- 1,348 portfolio-weeks -- and the
   baseline looks like something at +5.9%/yr, p=0.047, but **0 of 5 robustness specs survive**
   (quintiles 0.174, returns clipped at +/-5% 0.381, halves 0.187/0.140). Verdict recorded as
-  "nominally significant, fragile, not established". Two corrections found en route that must
+  "nominally significant, fragile, not established" -- **superseded the same day**: three of
+  those five specs measured power rather than effect size and were miscounted, and the real
+  explanation is the volatility tilt in the bullet above. Read that one, not this count. Two corrections found en route that must
   not be undone: an entry lag (CFTC is as-of Tuesday, published Friday -- forming on the
   as-of date traded 3 of 7 days on unpublished information, and fixing it cost a quarter of
   the raw effect), and normalizing net position by open interest instead of using raw

@@ -1,4 +1,4 @@
-Last updated: 2026-08-25 | Status: pushed to `AdamMooo/cot-scraper`; weekly automation live pending the three Gmail secrets
+Last updated: 2026-08-26 | Status: pushed to `AdamMooo/cot-scraper`; weekly automation live pending the three Gmail secrets
 
 ## Repo Card
 
@@ -238,7 +238,7 @@ and speculators cut net length *after* adverse moves, so a low crowding
 percentile mechanically coincides with elevated trailing vol. The signal is
 partly a lagged volatility proxy. Scaling each leg to equal risk
 (`vol_scaled_leg`) takes the estimate from +6.6% to +5.0% annualised and p
-from 0.027 to ~0.15.
+from 0.030 to 0.146.
 
 **The decisive test is the rank information coefficient, not the spread.**
 Mean weekly Spearman correlation between crowding percentile and forward
@@ -254,8 +254,13 @@ general "the tilt was the return" result; Moreira-Muir for vol management.
 estimate by roughly a quarter, which alone would be suggestive rather than
 conclusive. The reading is decisive because three independent angles agree:
 no rank information, a highly significant vol tilt in the legs, and the 20
-largest weeks netting *against* the effect (they are +16.2% and -16.2% at
-the top and largely cancel, so no handful of weeks drives it either).
+largest weeks by magnitude netting **-20.8%** against a series total of
++152.6%, so the effect lives in the rest of the sample rather than in a
+handful of weeks (`_tail_contribution`). Do not restate that angle as the
+largest single positive and negative weeks, +16.2% and -16.2% -- those are
+near-mirror images of each other by construction and say nothing about the
+tail's contribution; an earlier version of this file quoted them as if they
+were the net figure.
 
 **Roll contamination was the wrong suspect, and this file previously named
 it the highest-value next step. It is not.** `roll_check.py` localises it:
@@ -266,7 +271,7 @@ contract settles to an announced monthly price so it sits pinned, then jumps
 contracts), Lean Hogs 1.51x and Live Cattle 1.38x, and each peak bucket
 matches that contract's actual expiry rule. The rest of the universe is flat
 to within 1.25x. **Removing the three makes the raw effect stronger, not
-weaker** (+6.3% annualised, p=0.033; milk alone out, +7.0%, p=0.028). Roll
+weaker** (+6.3% annualised, p=0.037; milk alone out, +7.0%, p=0.034). Roll
 gaps were adding noise, not manufacturing the result. A roll-adjusted feed
 would sharpen the analysis; it would not change the conclusion.
 
@@ -278,16 +283,19 @@ numerator (evidence against the effect) or inflating the denominator
 
 | Original check | mean/wk | p | What it actually tested |
 |---|---|---|---|
-| Quintiles instead of terciles | +0.110% | 0.174 | power, not monotonicity -- a quintile leg holds ~4 names against a tercile's ~8, so it is less diversified and noisier. The mean is *unchanged*; only the standard error moved. |
-| First half alone | +0.110% | 0.187 | power -- halving the sample multiplies the SE by ~sqrt(2), so an effect at p=0.045 in full is *expected* near p=0.15 in half |
-| Second half alone | +0.116% | 0.140 | same; the halves differ from each other by 0.3% annualised, i.e. nothing (Gelman-Stern: a difference in significance is not significance in difference) |
-| Returns clipped at +/-5% | +0.035% | 0.381 | too aggressive to be an outlier test -- it binds on **19%** of commodity-weeks, compressing the whole distribution in the volatile half of the universe. The +/-10% version binds on 4% and leaves the estimate at +5.1% |
+| Quintiles instead of terciles | +0.109% | 0.179 | power, not monotonicity -- a quintile leg holds ~4 names against a tercile's ~8, so it is less diversified and noisier. The mean is *unchanged*; only the standard error moved. |
+| First half alone | +0.110% | 0.179 | power -- halving the sample multiplies the SE by ~sqrt(2), so an effect at p=0.045 in full is *expected* near p=0.15 in half |
+| Second half alone | +0.116% | 0.148 | same; the halves differ from each other by 0.3% annualised, i.e. nothing (Gelman-Stern: a difference in significance is not significance in difference) |
+| Returns clipped at +/-5% | +0.035% | 0.384 | too aggressive to be an outlier test -- it binds on **19%** of commodity-weeks, compressing the whole distribution in the volatile half of the universe. The +/-10% version binds on 4% and leaves the estimate at +5.1% |
 
 The robustness table now tags each spec `effect size` / `power` /
-`distorted` and only counts the effect-size rows, and adds a
+`distorted` and only counts the effect-size rows -- **2 of 4 of those clear
+p<0.05** (risk parity 0.146 and the +/-10% winsorisation 0.058 do not; the
+matched equal-weighted control 0.030 and ex-roll-contaminated 0.037 do). It
+also adds a
 leave-one-commodity-out jackknife -- the original varied buckets, clipping
 and time but never cross-section *membership*, the axis a 24-name portfolio
-is most exposed on. 22 of 24 single drops leave p<0.05; only Coffee (0.104)
+is most exposed on. 23 of 24 single drops leave p<0.05; only Coffee (0.083)
 is a real single-name dependency. Watch the mechanical artifact there:
 dropping any name takes the tercile cut from 24//3=8 to 23//3=7, so most
 drops nudge the mean up for reasons having nothing to do with the dropped

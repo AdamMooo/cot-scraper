@@ -45,8 +45,8 @@ reasons:
   - The originally-named suspect, roll contamination in Yahoo's continuous
     series, is NOT the driver. `roll_check` localises it to three
     livestock/dairy contracts, and removing them makes the raw effect
-    STRONGER (+5.9% -> +6.3% annualised, p 0.045 -> 0.036). Milk alone out:
-    +7.0%, p=0.028. Roll gaps were diluting the signal, not creating it.
+    STRONGER (+5.9% -> +6.3% annualised, p 0.047 -> 0.037). Milk alone out:
+    +7.0%, p=0.034. Roll gaps were diluting the signal, not creating it.
   - Three of the five original specs measured statistical power, not effect
     stability, and were miscounted as failures. See the "Reading a robustness
     table" section of the generated markdown for the arithmetic.
@@ -96,6 +96,10 @@ _SEED = 20260825
 # Trailing realised vol for the risk-parity spec, measured over weeks
 # STRICTLY BEFORE entry. Full-sample vol would be look-ahead of exactly the
 # kind point_in_time_percentiles exists to avoid.
+# The third angle the verdict rests on: if the largest weeks by magnitude net
+# AGAINST the effect, no small set of weeks is manufacturing it.
+_TAIL_WEEKS = 20
+
 _VOL_WINDOW = 52
 _MIN_VOL_OBS = 30
 
@@ -166,6 +170,22 @@ def _vol_subpanel(dates, signal, vol) -> tuple[list[str], dict]:
     return sorted(restricted), restricted
 
 
+def _average_ranks(vals: list[float]) -> list[float]:
+    """Ranks 1..n, with tied values sharing the average of the positions they span."""
+    order = sorted(range(len(vals)), key=lambda i: vals[i])
+    ranks = [0.0] * len(vals)
+    i = 0
+    while i < len(order):
+        j = i
+        while j + 1 < len(order) and vals[order[j + 1]] == vals[order[i]]:
+            j += 1
+        shared = (i + j) / 2 + 1
+        for k in range(i, j + 1):
+            ranks[order[k]] = shared
+        i = j + 1
+    return ranks
+
+
 def spearman_ic(signal_vals: list[float], return_vals: list[float]) -> float | None:
     """Rank correlation between crowding and forward return for ONE week.
 
@@ -191,7 +211,11 @@ def spearman_ic(signal_vals: list[float], return_vals: list[float]) -> float | N
       - Sign convention: `signal_vals` is a CROWDING percentile, so a real
         "crowded positions underperform" effect gives a NEGATIVE IC.
     """
-    raise NotImplementedError("spearman_ic: see docstring contract")
+    a, b = _average_ranks(signal_vals), _average_ranks(return_vals)
+    try:
+        return statistics.correlation(a, b)
+    except statistics.StatisticsError:
+        return None
 
 
 def vol_scaled_leg(names, returns: dict, vols: dict, target_vol: float) -> float:
@@ -215,7 +239,7 @@ def vol_scaled_leg(names, returns: dict, vols: dict, target_vol: float) -> float
         multiplies every observation equally, so it cannot change a p-value.
         It exists so the output is readable next to the unscaled spread.
     """
-    raise NotImplementedError("vol_scaled_leg: see docstring contract")
+    return statistics.fmean(returns[n] * target_vol / vols[n] for n in names)
 
 
 def _tercile_spread(dates, signal, forward) -> list[tuple[str, float, float, float, int]]:
@@ -285,6 +309,25 @@ def _leg_vol_gap(dates, signal, vol) -> list[float]:
         out.append(statistics.fmean([vol[day][n] for n, _ in pairs[:cut]])
                    - statistics.fmean([vol[day][n] for n, _ in pairs[-cut:]]))
     return out
+
+
+def _tail_contribution(spreads: list[float], k: int = _TAIL_WEEKS) -> dict:
+    """Do the k biggest weeks by magnitude carry the total, or net against it?
+
+    A magnitude-weighted spread can be manufactured by a handful of weeks, so
+    "the tails do not drive it" needs a number rather than an assertion. Note
+    what this is NOT: the largest single positive and negative weeks are
+    near-mirror images (+16% / -16%), and quoting those as the tail's net
+    contribution was an error in an earlier version of the docs.
+    """
+    top = sorted(spreads, key=lambda v: -abs(v))[:k]
+    return {
+        "tail_weeks": k,
+        "tail_net": sum(top),
+        "tail_largest_week": max(spreads),
+        "tail_most_negative_week": min(spreads),
+        "series_total": sum(spreads),
+    }
 
 
 def _clip_share(dates, forward, clip: float) -> float:
@@ -455,6 +498,8 @@ def run() -> dict:
     gap_mean = statistics.fmean(gap)
     gap_p = _p_two_sided(gap, rng)
 
+    tail = _tail_contribution(spreads)
+
     robustness = _robustness(dates, signal, forward, vol, rng)
     jackknife = _jackknife(dates, signal, forward, rng)
 
@@ -504,6 +549,7 @@ def run() -> dict:
         "vol_gap_mean": gap_mean,
         "vol_gap_p_value": gap_p,
         "vol_gap_positive_weeks_pct": 100 * sum(1 for g in gap if g > 0) / len(gap),
+        **tail,
         "caveat": "price-only returns, excludes roll yield and costs; measures information, not tradability",
     }
 
@@ -704,7 +750,9 @@ def _markdown(r: dict) -> str:
         "the point estimate by roughly a quarter, which on its own would be suggestive "
         "rather than conclusive. What makes the reading decisive is that three "
         "independent angles agree: no rank information, a highly significant volatility "
-        "tilt in the legs, and the largest weeks netting against the effect.",
+        f"tilt in the legs, and the {r['tail_weeks']} largest weeks by magnitude netting "
+        f"{r['tail_net']:+.1%} against a series total of {r['series_total']:+.1%} -- so "
+        "the effect comes from the rest of the sample, not from a handful of weeks.",
         "",
     ])
 
