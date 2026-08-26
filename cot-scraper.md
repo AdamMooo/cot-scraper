@@ -28,8 +28,10 @@ diagnosis reproduces from source, so `research/CROSS-SECTION.md` and `cross_sect
 are now generated output rather than a writeup ahead of its own code. Nothing imports
 `cross_section`, so the Friday automation was never affected either way.
 
-The remaining open item is the Managed Money (Disaggregated, 2009-present) cross-sectional
-test, which is a fresh experiment rather than unfinished work.
+The remaining open item is the Managed Money cross-sectional test. Its measure-before-you-model
+step is done (`managed_money.py`, `research/MANAGED-MONEY.md`) and it changed the design: test
+the **flow**, not the level, and control for **short-term reversal**, not just the volatility
+tilt. The signal test itself is not built.
 
 ## Handoff Notes
 
@@ -45,6 +47,29 @@ data" turned out to be the real ask, not just downloading. Text-only stuck throu
 (smaller, pandas-ready).
 
 ## Recent Changes
+
+- 2026-08-26 (Managed Money, measured before modelled): Downloaded the Disaggregated (Futures
+  Only) history and wrote `managed_money.py` -- a diagnostic that ranks nothing, because the
+  last two attempts here each died on something cheap to measure up front. Four data facts
+  verified against the real files, each of which would have failed silently: **Managed Money
+  is columns 13/14, not the legacy report's 8/9** (8/9 here are Producer/Merchant, so the
+  reuse would have analysed commercial hedgers under a Managed Money label); the 2010-2012
+  files **declare** column 2 as `Report_Date_as_MM_DD_YYYY` while every value in them is ISO,
+  so coding to the header label writes a parser that rejects valid data; history starts
+  **2010-01-05, not 2009** (836 weeks, not the "2009-present" the docs claimed); and
+  `contracts.py`'s rename chains stitch 24 of 24 unchanged. Then two findings that redesigned
+  the experiment. **(1) Test the flow, not the level:** AR(1) of MM net/OI is +0.968 as a
+  level and +0.268 differenced, so ~13 effective observations per commodity against ~475 --
+  about 36x the power, and an independent re-derivation of this repo's "3-12 episodes"
+  arithmetic from a different direction. A cleaner speculation proxy does not fix a
+  sample-size problem; differencing does. **(2) Flow's booby trap is short-term reversal, not
+  the vol tilt:** MM flow correlates +0.133 with the *same* week's return (specs add length
+  after price rises -- the documented mechanism), and weekly commodity returns mean-revert, so
+  a flow signal inherits reversal for free and would present as a discovery. Against the next
+  week it is -0.030, negative in 18 of 24 names (sign test p=0.023). So the test now needs two
+  controls neither previous study did: flow orthogonalised against the same week's own return,
+  and a head-to-head against pure lagged-return reversal -- if reversal does as well, the CFTC
+  column added nothing, and that is the result.
 
 - 2026-08-26 (the analysis now runs from source): Wrote the two estimators the previous
   session had left as deliberate holes -- `spearman_ic` (tie-corrected Spearman via average

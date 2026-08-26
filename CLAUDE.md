@@ -86,6 +86,7 @@ files, same as the base kit's own design intent:
 | `prices.py` | Weekly closes from Yahoo's public chart endpoint. Two traps found by testing: `range=max` silently returns **monthly** bars, so explicit `period1`/`period2` epochs are required; and history starts mid-2000, which caps any price-linked study at ~26 years even though positioning goes back to 1986. Cached to `.cot-cache/prices/` |
 | `study.py` | Time-series forward-return study. Offline research step, not part of the weekly job. See "The empirical finding" below before touching it |
 | `cross_section.py` | Cross-sectional test: rank all commodities against each other weekly, long least-crowded vs short most-crowded. Exists because the time-series test is sample-starved (8 episodes per commodity); this gets 1,348 portfolio-weeks. The nominally-significant spread turns out to be a volatility tilt, not positioning -- see "The cross-sectional attempt" below before touching it |
+| `managed_money.py` | Diagnostic on the Disaggregated report's Managed Money columns: verifies the column indices against every year-file, then measures level-vs-flow persistence and the flow/return correlation. Ranks no signal and makes no claim about returns -- it exists to say what the eventual test has to control for. See "Managed Money" below |
 | `roll_check.py` | Data-quality diagnostic for `prices.py`: bucket weekly \|return\| by day-of-month to find contract-roll gaps in Yahoo's non-roll-adjusted continuous series. Flags 3 of 24 (Class III Milk, Lean Hogs, Live Cattle). Standalone, no effect on the weekly job |
 
 ## Weekly automation
@@ -326,17 +327,58 @@ Two corrections found here are worth not re-breaking:
   signal. And note it moved a p-value without moving the mean, which is the
   robustness-table lesson again.
 
-Extending this properly: the Disaggregated report separates Managed Money
-from Producer/Merchant and Swap Dealers, which is a cleaner speculation proxy
-than the legacy non-commercial bucket (CFTC split the report in 2009 for that
-reason). Testing Managed Money positioning on 2009-present is the obvious
-next experiment, at the cost of a much shorter history. Do it inside the
-cross-sectional framing, not the time-series one, or the sample will be too
-small to say anything -- and carry the vol-tilt controls in from the start.
-A cleaner speculation proxy is if anything *more* likely to correlate with
-volatility, so a fresh equal-weighted tercile spread on Managed Money would
-reproduce the same artifact and look like a discovery. Report its IC and its
-risk-parity spread alongside the raw spread, or it is not worth running.
+### Managed Money: what was measured before modelling it
+
+`managed_money.py` (2026-08-26) is the measure-before-you-model step for the
+Disaggregated report, and it changed the plan the paragraph above used to
+state. It is a diagnostic, not a signal test -- it deliberately ranks nothing.
+Read `research/MANAGED-MONEY.md` before building the test.
+
+Verified against the real files, all of which would have been silent failures:
+
+- **Managed Money is columns 13/14, not the legacy report's 8/9.** In this
+  layout 8/9 are Producer/Merchant, so reusing the legacy indices analyses
+  commercial hedgers under a Managed Money label. Same indices in all 17
+  year-files, 191 columns each.
+- **The 2010-2012 files' header label is wrong.** They declare column 2 as
+  `Report_Date_as_MM_DD_YYYY` while every value in them is ISO `YYYY-MM-DD`,
+  same as 2013+. Coding to the declared name writes a parser that rejects
+  valid data. The current-year file has no header row at all.
+- **History starts 2010-01-05, not 2009** -- the report launched in 2009 but
+  CFTC's per-year archive for this prefix begins at 2010. 836 weeks against
+  the legacy study's 1,348. The "2009-present" figure was wrong.
+- `contracts.py`'s rename chains work unchanged: 24 of 24 stitch.
+
+**Finding 1: test the flow, not the level.** Mean AR(1) of Managed Money
+net/OI is **+0.968 as a level, +0.268 as a weekly change**. Under the standard
+n(1-rho)/(1+rho) adjustment that is ~13 effective observations per commodity
+against ~475 -- about 36x the power. The level figure independently reproduces
+the "3-12 episodes per commodity" arithmetic above from a different direction,
+and it is the reason not to simply re-run the level test on a cleaner proxy:
+**a better speculation measure does not fix a sample-size problem, and
+differencing does.**
+
+**Finding 2: flow's booby trap is short-term reversal, not the vol tilt.**
+Managed Money flow correlates **+0.133 with the same week's return** -- specs
+add length in weeks price rose, which is the documented mechanism. Weekly
+commodity returns mean-revert, so a flow signal inherits short-term reversal
+for free and will present as a positioning discovery. Against the next week's
+return it is **-0.030, negative in 18 of 24 commodities** (two-sided sign test
+p=0.023, computed by `_sign_test_p`, not by hand). Right direction for a
+price-pressure story; nowhere near enough to accept on a raw tercile spread.
+
+So the eventual test must include, on top of everything `cross_section.py`
+already carries (entry lag, point-in-time percentiles, IC, risk-parity legs --
+a cleaner speculation proxy is if anything *more* likely to correlate with
+volatility):
+
+1. **Flow orthogonalised against the same week's own return**, as its own
+   spec. This control is specific to flow; neither previous study needed it.
+2. **A head-to-head against pure short-term reversal** -- rank on lagged
+   return alone, no CFTC data. If reversal does as well, the CFTC column added
+   nothing, and that is the finding.
+
+Do it in the cross-sectional framing, not the time-series one.
 
 ## Do Not Touch
 
