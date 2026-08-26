@@ -312,7 +312,19 @@ Two corrections found here are worth not re-breaking:
   strictly before entry (`_VOL_WINDOW`, sliced `[:entry]`). Full-sample vol
   is the easier thing to write and is look-ahead bias of exactly the kind
   `point_in_time_percentiles` exists to prevent: it would let the portfolio
-  know in advance which weeks were calm.
+  know in advance which weeks were calm. Measured 2026-08-26, and the channel
+  is not the obvious one: the point estimate is **unchanged** (+0.0959% vs
+  +0.0964%/wk), because ~81% of the +0.37pp leg vol gap is a durable
+  cross-sectional ranking a static estimate still captures and only ~19% is
+  the time-varying "vol is high right now" component. The damage is entirely
+  in the standard error -- a rolling 1/vol scaler injects estimation noise and
+  amplifies weeks whose trailing window happened to be low (18.5% vs 16.5%
+  annualised) -- so full-sample vol would have printed this spec at p=0.084
+  instead of 0.142, making the vol tilt look like a weaker explanation than it
+  is. Note the shape of the error: the look-ahead sits in the *control*, and a
+  weakened control inflates the residual effect, so it still flatters the
+  signal. And note it moved a p-value without moving the mean, which is the
+  robustness-table lesson again.
 
 Extending this properly: the Disaggregated report separates Managed Money
 from Producer/Merchant and Swap Dealers, which is a cleaner speculation proxy

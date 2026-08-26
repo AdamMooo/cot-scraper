@@ -744,8 +744,16 @@ def _markdown(r: dict) -> str:
         "would report a smaller p-value and would be wrong.",
         "- Trailing volatility for the risk-parity spec uses the 52 weeks strictly before "
         "entry. Full-sample volatility would be look-ahead bias of exactly the kind "
-        "point-in-time percentiles exist to avoid, and it would flatter the result: "
-        "knowing which weeks were calm in advance is not available to anyone trading it.",
+        "point-in-time percentiles exist to avoid, and measuring it (2026-08-26) shows "
+        "where the damage lands: the point ESTIMATE is unchanged (+0.0959% vs +0.0964% "
+        "per week), because ~81% of the leg vol gap is a durable cross-sectional ranking "
+        "that a static estimate still sees. What changes is the standard error -- a "
+        "rolling 1/vol scaler injects estimation noise and amplifies weeks whose trailing "
+        "window happened to be low (18.5% vs 16.5% annualised) -- so full-sample vol "
+        "would have reported this spec at p=0.084 rather than 0.142 and made the "
+        "volatility tilt look like a weaker explanation than it is. The lesson is the "
+        "same one the robustness table teaches: a specification can move a p-value "
+        "without touching the effect.",
         "- Losing significance is not the same as demonstrating zero. Risk parity moves "
         "the point estimate by roughly a quarter, which on its own would be suggestive "
         "rather than conclusive. What makes the reading decisive is that three "
