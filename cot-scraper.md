@@ -53,6 +53,25 @@ data" turned out to be the real ask, not just downloading. Text-only stuck throu
 
 ## Recent Changes
 
+- 2026-08-27 (applications survey — what the data IS for): Ran a three-lane deep-research
+  survey (return-prediction literature, positioning-as-risk literature, documented
+  practitioner usage) and synthesised it into `research/APPLICATIONS.md`. Headlines: our
+  three nulls reproduce the post-2015 peer-reviewed consensus (Sanders-Irwin, Gorton-
+  Hayashi-Rouwenhorst, KRT's t=-0.43 on raw hedging-pressure levels); Kang-Rouwenhorst-Tang
+  2020's two-premium decomposition explains *why* naive positioning tests null out (a
+  short-horizon liquidity premium and a long-horizon insurance premium with opposite signs,
+  mixed in any raw net-position measure); the classic Basu-Miffre hedging-pressure premium
+  loses significance post-2004 in careful replication (Maréchal 2023) -- exactly our era;
+  our vol-tilt finding is the public-data shadow of Cheng-Kirilenko-Xiong's convective risk
+  flows; and documented practitioner usage (Kemp, Saxo, bank FICC weeklies, OFR, ECB)
+  converges on exactly the three uses our measurements support: attribution, crowding-as-
+  fragility, structural monitoring. The retail COT-Index/WILLCO tradition has never passed
+  an independent test. Two legitimate follow-ups identified and ranked: crowding as a
+  *vol* forecaster incremental to a HAR baseline (no published commodity version), and
+  commercial flow raced against reversal (targets the one premium that survives post-2004).
+  Fragility lesson from the episode record: watch open interest collapse, not just net
+  length (nickel's short was 80% OTC-invisible; cocoa's blow-off showed as falling OI).
+
 - 2026-08-27 (the flow test ran, and the research question is closed): Built and ran
   `mm_flow.py`, the test `managed_money.py`'s diagnostic specified: Managed Money flow,
   within-commodity point-in-time percentiles, ranked cross-sectionally, 1-week entry lag,

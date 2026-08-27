@@ -422,6 +422,19 @@ holding horizons, or a genuinely different signal family); another
 re-ranking of the same columns is not going to find anything these three
 didn't.
 
+**`research/APPLICATIONS.md`** (2026-08-27, hand-written synthesis of a
+three-lane literature/practice survey) records what the data IS for --
+attribution, crowding-as-fragility, structural monitoring -- with evidence
+grades, where our results sit in the literature (they reproduce the
+post-2015 consensus; Kang-Rouwenhorst-Tang 2020's two-premium decomposition
+explains why naive tests null out), and the only two follow-up tests that
+would qualify as new questions rather than re-ranking: crowding as a
+*volatility* forecaster incremental to a HAR baseline (no published
+commodity version exists), and commercial flow (not MM) raced against
+reversal, which targets the one published positioning premium that
+survives post-2004 replication (Maréchal 2023). Read it before proposing
+any new use of this data.
+
 ## Do Not Touch
 
 - This started as a fork of a generic base kit (same shape used elsewhere for
