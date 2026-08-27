@@ -28,10 +28,14 @@ diagnosis reproduces from source, so `research/CROSS-SECTION.md` and `cross_sect
 are now generated output rather than a writeup ahead of its own code. Nothing imports
 `cross_section`, so the Friday automation was never affected either way.
 
-The remaining open item is the Managed Money cross-sectional test. Its measure-before-you-model
-step is done (`managed_money.py`, `research/MANAGED-MONEY.md`) and it changed the design: test
-the **flow**, not the level, and control for **short-term reversal**, not just the volatility
-tilt. The signal test itself is not built.
+The research question is **closed** as of 2026-08-27. The Managed Money flow test
+(`mm_flow.py`) -- the highest-powered framing available, ~36x the effective sample of the
+level tests -- found exactly zero cross-sectional information (rank IC +0.0002, p=0.99),
+and a benchmark using no CFTC data at all (pure short-term reversal) beat it decisively on
+identical weeks. Three studies, three angles, same answer: COT positioning does not tell
+you which commodities to favour or avoid. The weekly email describes positioning and
+cites all of this in its footer. The email itself also renders as real HTML now instead
+of a `<pre>` dump of raw markdown.
 
 ## Handoff Notes
 
@@ -47,6 +51,26 @@ data" turned out to be the real ask, not just downloading. Text-only stuck throu
 (smaller, pandas-ready).
 
 ## Recent Changes
+
+- 2026-08-27 (the flow test ran, and the research question is closed): Built and ran
+  `mm_flow.py`, the test `managed_money.py`'s diagnostic specified: Managed Money flow,
+  within-commodity point-in-time percentiles, ranked cross-sectionally, 1-week entry lag,
+  with the two controls neither earlier study needed -- flow orthogonalised against the
+  formation week's own return, and a head-to-head against pure lagged-return reversal --
+  plus everything `cross_section.py` carries (IC, risk-parity legs, block bootstrap,
+  jackknife). 574 portfolio-weeks, 2015-2025. **Flow is exactly zero**: spread +3.5%/yr
+  p=0.47, rank IC +0.0002 p=0.99, unchanged by orthogonalisation, every jackknife drop
+  flat. The orthogonalisation control turned out to have nothing to do: the flow and
+  reversal portfolios correlate at only +0.05, so flow was not even repackaged reversal --
+  just noise. **The no-CFTC benchmark won the head-to-head**: reversal prints +20.6%/yr at
+  p=0.000 on identical weeks, survives its own vol-tilt check (risk-parity +17.7%/yr,
+  p=0.003; leg vol gap +0.02pp/wk, p=0.61 -- so it is not the cross_section artifact), but
+  is recorded as the yardstick flow failed against, not a discovery: modest IC (-0.024)
+  against a big spread, gross of costs at ~100% weekly turnover, and the classic strategy
+  measurement noise inflates. Also formatted the weekly email: `notify._markdown_to_html`
+  renders headings/bullets/bold/tables with inline styles (Gmail strips `<style>`), numeric
+  cells right-aligned, +/- coloured; the footer now cites the flow IC alongside the legacy
+  hit rates. Results: `research/MM-FLOW.md` / `mm_flow.json`.
 
 - 2026-08-26 (Managed Money, measured before modelled): Downloaded the Disaggregated (Futures
   Only) history and wrote `managed_money.py` -- a diagnostic that ranks nothing, because the
@@ -163,6 +187,8 @@ Hogs, Live Cattle) -- but this is a data-quality wart, not a blocker: removing t
 makes the cross-sectional effect *stronger*, so roll gaps were adding noise rather than
 manufacturing the result. A roll-adjusted feed would sharpen the analysis, nothing more. No `.venv` created for this repo -- ran against system Python 3.13 during
 development. `build_exe.py` untested against this fork (not the current
-priority). Analysis covers only the Legacy (Futures Only) report; Disaggregated/TFF
-breakdowns (Managed Money vs. Producer positioning) are a possible fast follow, not done.
+priority). The weekly email covers only the Legacy (Futures Only) report; the
+Disaggregated report's Managed Money columns were researched (`managed_money.py`,
+`mm_flow.py`) and found to carry no signal, so there is no analytical reason to add them
+to the email -- doing so would be a formatting exercise, not a fast follow.
 

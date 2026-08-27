@@ -128,6 +128,7 @@ _MAX_PLAUSIBLE_GAP_DAYS = 10
 _EXTREME_HIGH = 90
 _EXTREME_LOW = 10
 _RESEARCH_FILE = Path(__file__).resolve().parent / "research" / "forward_returns.json"
+_MM_FLOW_FILE = Path(__file__).resolve().parent / "research" / "mm_flow.json"
 
 
 def _ordinal(n: float) -> str:
@@ -197,13 +198,24 @@ def _predictive_power_note() -> str:
         return ""
     best = min(pooled, key=lambda p: p["p_value_quarter_clustered"])
     rates = [p["reversion_hit_rate"] for p in pooled]
-    return (
+    note = (
         f"Positioning extremes are context, not forecasts. Across {best['episodes']} historical "
         f"episodes in {best['clusters_quarters']} distinct quarters, forward returns after a "
         f"crowded reading were indistinguishable from chance (mean reversion hit rate "
         f"{min(rates)*100:.0f}-{max(rates)*100:.0f}%, best p={best['p_value_quarter_clustered']:.2f}). "
         f"See research/FINDINGS.md."
     )
+    try:
+        mm = json.loads(_MM_FLOW_FILE.read_text(encoding="utf-8"))
+        note += (
+            f" A follow-up with ~36x the statistical power (Managed Money weekly flow, ranked "
+            f"across all commodities, {mm['weeks']:,} portfolio-weeks) found the same: rank "
+            f"correlation with next week's returns {mm['ic']['flow']['mean']:+.4f} "
+            f"(p={mm['ic']['flow']['p_value']:.2f}). See research/MM-FLOW.md."
+        )
+    except (OSError, ValueError, KeyError):
+        pass
+    return note
 
 
 def _fmt(r: Reading) -> str:

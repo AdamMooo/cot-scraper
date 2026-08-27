@@ -47,4 +47,4 @@ Percentile ranks net position as a share of open interest, so it is not distorte
 
 ---
 
-Positioning extremes are context, not forecasts. Across 173 historical episodes in 80 distinct quarters, forward returns after a crowded reading were indistinguishable from chance (mean reversion hit rate 44-54%, best p=0.25). See research/FINDINGS.md.
+Positioning extremes are context, not forecasts. Across 173 historical episodes in 80 distinct quarters, forward returns after a crowded reading were indistinguishable from chance (mean reversion hit rate 44-54%, best p=0.25). See research/FINDINGS.md. A follow-up with ~36x the statistical power (Managed Money weekly flow, ranked across all commodities, 574 portfolio-weeks) found the same: rank correlation with next week's returns +0.0002 (p=0.99). See research/MM-FLOW.md.

@@ -1,4 +1,4 @@
-Last updated: 2026-08-26 | Status: pushed to `AdamMooo/cot-scraper`; weekly automation live pending the three Gmail secrets
+Last updated: 2026-08-27 | Status: pushed to `AdamMooo/cot-scraper`; weekly automation live pending the three Gmail secrets. Research question CLOSED: three studies, three angles, no investable information in COT positioning (see "The empirical finding" and "Managed Money" below)
 
 ## Repo Card
 
@@ -87,6 +87,7 @@ files, same as the base kit's own design intent:
 | `study.py` | Time-series forward-return study. Offline research step, not part of the weekly job. See "The empirical finding" below before touching it |
 | `cross_section.py` | Cross-sectional test: rank all commodities against each other weekly, long least-crowded vs short most-crowded. Exists because the time-series test is sample-starved (8 episodes per commodity); this gets 1,348 portfolio-weeks. The nominally-significant spread turns out to be a volatility tilt, not positioning -- see "The cross-sectional attempt" below before touching it |
 | `managed_money.py` | Diagnostic on the Disaggregated report's Managed Money columns: verifies the column indices against every year-file, then measures level-vs-flow persistence and the flow/return correlation. Ranks no signal and makes no claim about returns -- it exists to say what the eventual test has to control for. See "Managed Money" below |
+| `mm_flow.py` | The test `managed_money.py` specified, run 2026-08-27: Managed Money flow ranked cross-sectionally, orthogonalised against the formation-week return, raced head-to-head against pure short-term reversal, with all of `cross_section.py`'s controls carried over (entry lag, point-in-time percentiles, IC, risk-parity legs, jackknife). **Verdict: flow has zero cross-sectional information** (IC +0.0002, p=0.99), and the no-CFTC reversal benchmark beats it decisively. This closed the research question. See "Managed Money" below and `research/MM-FLOW.md` |
 | `roll_check.py` | Data-quality diagnostic for `prices.py`: bucket weekly \|return\| by day-of-month to find contract-roll gaps in Yahoo's non-roll-adjusted continuous series. Flags 3 of 24 (Class III Milk, Lean Hogs, Live Cattle). Standalone, no effect on the weekly job |
 
 ## Weekly automation
@@ -164,7 +165,14 @@ out to be "collect and analyze every week," not "hand someone an exe."
   trading days back, so the price window always matches the actual
   positioning window being compared
 - **`notify.py`** -- Gmail SMTP, reading `GMAIL_USER`/`GMAIL_APP_PASSWORD`/`MAIL_TO`
-  from the environment (GitHub Actions secrets in CI). Never hardcode these
+  from the environment (GitHub Actions secrets in CI). Never hardcode these.
+  As of 2026-08-27 the HTML part is properly rendered, not a `<pre>` dump of
+  raw markdown: `_markdown_to_html` handles exactly the constructs
+  `build_report` emits (headings, bullets, bold, pipe tables, `---`), with
+  all styles inline because Gmail strips `<style>` blocks, numeric cells
+  right-aligned, and +/- values coloured green/red. The plain-text part
+  stays raw markdown. If `build_report` ever emits a new markdown construct,
+  extend the renderer to match
 - **`.github/workflows/weekly-cot-update.yml`** -- cron `30 21 * * 5` (Friday,
   comfortably after CFTC's 3:30pm ET release regardless of DST),
   `workflow_dispatch` enabled for manual test runs, `permissions: contents:
@@ -367,18 +375,52 @@ return it is **-0.030, negative in 18 of 24 commodities** (two-sided sign test
 p=0.023, computed by `_sign_test_p`, not by hand). Right direction for a
 price-pressure story; nowhere near enough to accept on a raw tercile spread.
 
-So the eventual test must include, on top of everything `cross_section.py`
-already carries (entry lag, point-in-time percentiles, IC, risk-parity legs --
-a cleaner speculation proxy is if anything *more* likely to correlate with
-volatility):
+### The flow test ran 2026-08-27 (`mm_flow.py`), and it closed the question
 
-1. **Flow orthogonalised against the same week's own return**, as its own
-   spec. This control is specific to flow; neither previous study needed it.
-2. **A head-to-head against pure short-term reversal** -- rank on lagged
-   return alone, no CFTC data. If reversal does as well, the CFTC column added
-   nothing, and that is the finding.
+The test above was run exactly as specified -- cross-sectional, both controls,
+everything `cross_section.py` carries (entry lag, point-in-time percentiles,
+IC, risk-parity legs, block bootstrap, leave-one-out jackknife). 574
+portfolio-weeks, 2014-12-30 to 2025-12-23, ~23.4 commodities per week (the
+260-week percentile warmup is spent inside the 2010-start history, hence
+~2015). Results in `research/MM-FLOW.md` / `research/mm_flow.json`.
 
-Do it in the cross-sectional framing, not the time-series one.
+**Managed Money flow has zero cross-sectional information.** Not
+underpowered-null like the level tests -- zero: tercile spread +3.5%/yr at
+p=0.47, and the rank IC is **+0.0002 at p=0.99**, the flattest number this
+repo has produced. Orthogonalisation barely changes it (+3.4%, p=0.54)
+because there turned out to be nothing to remove reversal *from*: the flow
+and reversal spread series correlate at only +0.05 -- the +0.133
+contemporaneous correlation was too weak to survive percentile-and-tercile
+processing. Every jackknife drop is flat (best p=0.195). This was the
+highest-powered version of the question (~36x the level test's effective
+sample), so the null is now a measurement, not an absence of evidence.
+
+**The head-to-head made the point brutally: the benchmark with no CFTC data
+won.** Pure short-term reversal -- rank on the formation week's own return,
+long losers, short winners -- prints +20.6%/yr at p=0.000 on the identical
+weeks and identical construction. So the week-to-week structure that exists
+in this universe lives in *prices*, and the CFTC positioning column adds
+nothing on top. Treat that reversal number with the suspicion this repo has
+earned: it did survive its own vol-tilt check (leg vol gap +0.02pp/wk
+p=0.61; risk-parity +17.7%/yr p=0.003, so it is NOT the cross_section.py
+artifact), but its IC (-0.024) is modest against the size of the spread,
+it is gross of costs on a strategy with ~100% weekly turnover, and weekly
+reversal is the classic strategy that measurement noise inflates and
+transaction costs kill. It is recorded as the yardstick flow failed
+against, not as a discovery. Chasing it would be a different project --
+one about price data, with no CFTC scraper required.
+
+**Where this leaves the repo:** the research question -- does COT
+positioning tell you which commodities to favour or avoid -- is answered
+three ways: levels don't forecast (time-series, `study.py`), the
+cross-sectional level spread was a volatility tilt (`cross_section.py`),
+and flow, the highest-powered framing, is exactly zero (`mm_flow.py`).
+The weekly email describes positioning and cites these numbers in its
+footer (`analysis._predictive_power_note` now includes the flow IC). Do
+not reopen this without new data (real roll-adjusted returns, different
+holding horizons, or a genuinely different signal family); another
+re-ranking of the same columns is not going to find anything these three
+didn't.
 
 ## Do Not Touch
 
