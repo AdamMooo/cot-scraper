@@ -263,6 +263,22 @@ def _fmt(r: Reading) -> str:
     return f"**{r.name}**: {', '.join(bits)}"
 
 
+# The scenario mechanics of an extreme: which way the accelerant points.
+# Deliberately conditional, never directional -- measured forward returns
+# after extremes are a coin flip (research/FINDINGS.md), but WHO can act next
+# is arithmetic: a crowd this large exiting is mechanical flow in one
+# scenario, and exhausted buying power in the other. Fuel asymmetry, not a
+# forecast; stated once per section rather than per market.
+_LONG_MECHANICS = ("At these levels the accelerant points down: a break lower would meet "
+                   "mechanical selling from exiting spec longs, while further upside needs "
+                   "new buyers -- specs have little room left to add. Which scenario arrives "
+                   "is the coin flip the footer describes; its speed is not.")
+_SHORT_MECHANICS = ("At these levels the accelerant points up: a bounce can be amplified by "
+                    "spec short-covering, while further downside needs new sellers -- specs "
+                    "have little room left to add. Which scenario arrives is the coin flip "
+                    "the footer describes; its speed is not.")
+
+
 def build_report(by_market: MarketHistory, title: str = "Legacy Report (Futures Only)") -> str:
     """Short, readable, descriptive. Detail table last, caveat at the bottom."""
     rows = _collect(by_market)
@@ -299,9 +315,10 @@ def build_report(by_market: MarketHistory, title: str = "Legacy Report (Futures 
                   "against. These fill in from the next run onward.", ""]
 
     if longs:
-        lines += ["## Crowded long", ""] + [f"- {_fmt(r)}" for r in longs] + [""]
+        lines += ["## Crowded long", "", _LONG_MECHANICS, ""] + [f"- {_fmt(r)}" for r in longs] + [""]
     if shorts:
-        lines += ["## Crowded short", ""] + [f"- {_fmt(r)}" for r in reversed(shorts)] + [""]
+        lines += ["## Crowded short", "", _SHORT_MECHANICS, ""] + [f"- {_fmt(r)}"
+                                                                   for r in reversed(shorts)] + [""]
 
     # The squeeze episode record (research/APPLICATIONS.md: nickel 2022,
     # cocoa 2024) says the dangerous shape is one-sided positioning while the

@@ -6,10 +6,14 @@ Week over week changes and price moves are not shown yet: only one weekly snapsh
 
 ## Crowded long
 
+At these levels the accelerant points down: a break lower would meet mechanical selling from exiting spec longs, while further upside needs new buyers -- specs have little room left to add. Which scenario arrives is the coin flip the footer describes; its speed is not.
+
 - **Gold**: 99th pct of 1,898wk, net +54.7% of open interest
 - **Copper**: 94th pct of 1,898wk, net +28.3% of open interest
 
 ## Crowded short
+
+At these levels the accelerant points up: a bounce can be amplified by spec short-covering, while further downside needs new sellers -- specs have little room left to add. Which scenario arrives is the coin flip the footer describes; its speed is not.
 
 - **Class III Milk**: 0th pct of 1,471wk, net -29.6% of open interest
 - **Lean Hogs**: 2nd pct of 1,899wk, net -22.7% of open interest

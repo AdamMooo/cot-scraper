@@ -157,7 +157,12 @@ out to be "collect and analyze every week," not "hand someone an exe."
     decile of that market's own history (self-calibrated, no magic
     threshold) -- the one-sided-crowd-plus-shrinking-market shape the squeeze
     episode record points at (nickel 2022, cocoa 2024; see
-    research/APPLICATIONS.md). None of it forecasts; all of it describes
+    research/APPLICATIONS.md). The crowded sections open with a one-line
+    scenario-mechanics preamble (`_LONG_MECHANICS`/`_SHORT_MECHANICS`): the
+    fuel asymmetry of an extreme, stated conditionally ("a break lower would
+    meet mechanical selling from exiting longs...") -- WHO can act next is
+    arithmetic even though direction is a measured coin flip. None of it
+    forecasts; all of it describes
   - **The report leads with a narrative, not a table.** A data table (even a
     filtered, price-annotated one) isn't analysis -- the user's words after
     the first version: "I DONT JUST WANT THE BENCHMARKS I WANT AN ACTUAL
