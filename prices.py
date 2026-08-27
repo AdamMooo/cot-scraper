@@ -16,6 +16,7 @@ there is no reason to re-hit Yahoo for history that cannot change.
 
 Public interface:
     weekly_closes(ticker)        -> [(iso_date, close)] ascending
+    daily_closes(ticker)         -> [(iso_date, close)] ascending
     close_asof(series, date)     -> close on/just before date, or None
     pct_change(series, d0, d1)   -> fractional change between two dates
 """
@@ -43,7 +44,17 @@ def _cache_dir():
 
 def weekly_closes(ticker: str, use_cache: bool = True) -> list[tuple[str, float]]:
     """Full weekly close history for a ticker, ascending by date."""
-    cache_file = _cache_dir() / f"{ticker.replace('=', '_')}.json"
+    return _closes(ticker, "1wk", f"{ticker.replace('=', '_')}.json", use_cache)
+
+
+def daily_closes(ticker: str, use_cache: bool = True) -> list[tuple[str, float]]:
+    """Full daily close history, for realized-vol work; weekly bars are too
+    coarse to measure the vol of a single week."""
+    return _closes(ticker, "1d", f"{ticker.replace('=', '_')}_daily.json", use_cache)
+
+
+def _closes(ticker: str, interval: str, cache_name: str, use_cache: bool) -> list[tuple[str, float]]:
+    cache_file = _cache_dir() / cache_name
     if use_cache and cache_file.exists():
         try:
             return [(d, c) for d, c in json.loads(cache_file.read_text())]
@@ -54,7 +65,7 @@ def weekly_closes(ticker: str, use_cache: bool = True) -> list[tuple[str, float]
     try:
         resp = get_session().get(
             f"https://query1.finance.yahoo.com/v8/finance/chart/{ticker}",
-            params={"period1": _EPOCH_START, "period2": period2, "interval": "1wk"},
+            params={"period1": _EPOCH_START, "period2": period2, "interval": interval},
             timeout=45,
         )
         resp.raise_for_status()

@@ -148,6 +148,8 @@ class Reading:
     pct: float
     change: int | None  # contracts vs prior report; None when no true prior week
     price_pct: float | None  # same-week price move, fraction
+    oi_change_pct: float | None  # open interest vs prior report, fraction
+    oi_collapsing: bool  # this week's OI change in the bottom decile of its own history
 
 
 def _collect(by_market: MarketHistory) -> list[Reading]:
@@ -169,8 +171,8 @@ def _collect(by_market: MarketHistory) -> list[Reading]:
         if len(series) < 2 or len(shares) < 2:
             continue
 
-        as_of, net, _oi = series[-1]
-        prior_date, prior_net, _prior_oi = series[-2]
+        as_of, net, oi = series[-1]
+        prior_date, prior_net, prior_oi = series[-2]
         if shares[-1][0] != as_of:
             continue  # latest week had no usable open interest
 
@@ -183,10 +185,24 @@ def _collect(by_market: MarketHistory) -> list[Reading]:
             closes = prices.weekly_closes(commodity.ticker)
             price_pct = prices.pct_change(closes, prior_date, as_of)
 
+        # OI collapse is flagged against the market's OWN distribution of
+        # weekly OI changes rather than a fixed threshold -- what counts as a
+        # sharp contraction in milk is routine in crude. The fragility read
+        # (one-sided positioning + shrinking open interest) is the shape the
+        # squeeze episode record points at; see research/APPLICATIONS.md.
+        oi_change_pct = None
+        oi_collapsing = False
+        if has_prior and prior_oi:
+            oi_change_pct = (oi - prior_oi) / prior_oi
+            oi_moves = sorted((b[2] - a[2]) / a[2] for a, b in zip(series, series[1:]) if a[2])
+            if len(oi_moves) >= 50:
+                oi_collapsing = oi_change_pct <= oi_moves[len(oi_moves) // 10]
+
         values = [v for _, v in shares]
         share = shares[-1][1]
         pct = 100.0 * sum(1 for v in values if v <= share) / len(values)
-        out.append(Reading(name, commodity.sector, as_of, net, share, len(values), pct, change, price_pct))
+        out.append(Reading(name, commodity.sector, as_of, net, share, len(values), pct, change,
+                           price_pct, oi_change_pct, oi_collapsing))
     return out
 
 
@@ -218,12 +234,32 @@ def _predictive_power_note() -> str:
     return note
 
 
+def _flow_read(r: Reading) -> str | None:
+    """What this week's move was made of, in plain English. Descriptive only.
+
+    Flow-with-price is the documented spec pattern (they chase: measured
+    +0.133 same-week flow/return correlation, research/MM-FLOW.md); flow
+    AGAINST price says the price move was driven by someone else's book --
+    commercial hedging, physical demand. Neither reading forecasts anything;
+    it attributes what already happened, which is the use the literature and
+    practitioner record actually support (research/APPLICATIONS.md).
+    """
+    if r.change is None or r.price_pct is None or r.change == 0 or abs(r.price_pct) < 0.001:
+        return None
+    if r.change > 0:
+        return "specs bought the rally" if r.price_pct > 0 else "a drop against spec buying"
+    return "specs sold the break" if r.price_pct < 0 else "a rally against spec selling"
+
+
 def _fmt(r: Reading) -> str:
     bits = [f"{_ordinal(r.pct)} pct of {r.weeks:,}wk", f"net {r.share*100:+.1f}% of open interest"]
     if r.change is not None:
         bits.append(f"{r.change:+,} contracts this wk")
     if r.price_pct is not None:
         bits.append(f"price {r.price_pct*100:+.1f}%")
+    read = _flow_read(r)
+    if read:
+        bits.append(read)
     return f"**{r.name}**: {', '.join(bits)}"
 
 
@@ -245,7 +281,13 @@ def build_report(by_market: MarketHistory, title: str = "Legacy Report (Futures 
     if longs or shorts:
         headline += f" ({len(longs)} crowded long, {len(shorts)} crowded short)"
     if movers:
-        headline += f". Biggest shift: {movers[0].name} {movers[0].change:+,} contracts"
+        m = movers[0]
+        headline += f". Biggest shift: {m.name} {m.change:+,} contracts"
+        if m.price_pct is not None:
+            headline += f" into a {m.price_pct*100:+.1f}% week"
+            read = _flow_read(m)
+            if read:
+                headline += f" -- {read}"
     lines += [headline + ".", ""]
 
     # Until a second weekly snapshot accumulates, there is no prior week to
@@ -260,6 +302,24 @@ def build_report(by_market: MarketHistory, title: str = "Legacy Report (Futures 
         lines += ["## Crowded long", ""] + [f"- {_fmt(r)}" for r in longs] + [""]
     if shorts:
         lines += ["## Crowded short", ""] + [f"- {_fmt(r)}" for r in reversed(shorts)] + [""]
+
+    # The squeeze episode record (research/APPLICATIONS.md: nickel 2022,
+    # cocoa 2024) says the dangerous shape is one-sided positioning while the
+    # market itself shrinks -- crowded exits, vanishing liquidity. Flagged
+    # only when both halves hold; still context, not a forecast.
+    fragile = [r for r in rows
+               if (r.pct >= _EXTREME_HIGH or r.pct <= _EXTREME_LOW) and r.oi_collapsing]
+    if fragile:
+        lines += ["## Fragility watch", "",
+                  "Positioning at an extreme while open interest contracts sharply -- the crowd "
+                  "is one-sided and the market it would have to exit through is shrinking.", ""]
+        for r in fragile:
+            side = "long" if r.pct >= _EXTREME_HIGH else "short"
+            lines.append(f"- **{r.name}**: crowded {side} ({_ordinal(r.pct)} pct) with open "
+                         f"interest {r.oi_change_pct*100:+.1f}% this week, a bottom-decile "
+                         f"contraction for this market")
+        lines.append("")
+
     if movers:
         lines += ["## Biggest shifts this week", ""] + [f"- {_fmt(r)}" for r in movers[:5]] + [""]
 
@@ -267,13 +327,14 @@ def build_report(by_market: MarketHistory, title: str = "Legacy Report (Futures 
               "Percentile ranks net position as a share of open interest, so it is not distorted "
               "by decades of growth in market size.",
               "",
-              "| Commodity | Sector | Net contracts | % of OI | vs prior wk | Percentile | History | Price (wk) |",
-              "|---|---|---|---|---|---|---|---|"]
+              "| Commodity | Sector | Net contracts | % of OI | vs prior wk | OI (wk) | Percentile | History | Price (wk) |",
+              "|---|---|---|---|---|---|---|---|---|"]
     for r in rows:
         change = f"{r.change:+,}" if r.change is not None else "n/a"
+        oi_move = f"{r.oi_change_pct*100:+.1f}%" if r.oi_change_pct is not None else "n/a"
         price = f"{r.price_pct*100:+.1f}%" if r.price_pct is not None else "n/a"
         lines.append(f"| {r.name} | {r.sector} | {r.net:+,} | {r.share*100:+.1f}% | {change} | "
-                     f"{_ordinal(r.pct)} | {r.weeks:,}wk | {price} |")
+                     f"{oi_move} | {_ordinal(r.pct)} | {r.weeks:,}wk | {price} |")
 
     note = _predictive_power_note()
     if note:

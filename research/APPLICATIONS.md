@@ -142,40 +142,51 @@ shape.
   ~142k contracts on WTI — a standing warning against clever derived
   metrics on this data.
 
-## 5. What is worth testing next, ranked by honesty and power
+## 5. What was worth testing next — and what happened when it ran
 
 Every entry respects the repo's hard-won rules: point-in-time everything,
 entry lag, orthogonalise against the thing the signal is known to proxy,
-and count effective observations before believing anything.
+and count effective observations before believing anything. Items 1, 2 and
+4 were executed the same day this file was written (2026-08-27); results
+recorded inline.
 
 1. **Does crowding forecast future realized vol, incrementally to vol's own
    persistence?** The survey found *no published commodity version* of this
-   test — genuinely open, and our data is already shaped for it. The
-   identification trap is documented in our own results: specs cut length
-   after vol rises, so crowding is partly a *lagged* vol proxy. The test is
-   therefore incremental R² over a HAR-style baseline (realized vol
-   regressed on its own daily/weekly/monthly averages — Corsi 2009), never
-   a raw correlation, or it rediscovers vol clustering. Well-powered: vol
-   is observable every week, no episode-collapse problem.
-2. **Resolve the KRT tension: commercial flow, not MM flow.** Our
-   head-to-head used Managed Money flow, 2010+. KRT's liquidity premium
-   uses *commercial* position changes, and Maréchal finds it robust
-   post-2004. The Legacy report has commercial columns back to 1986 — 1,348
-   weeks. Same harness as `mm_flow.py`: rank on commercial flow, race
-   against pure reversal on identical weeks. If reversal subsumes it too,
-   the strongest surviving positioning claim in the literature adds nothing
-   after a realistic lag; either outcome is publishable-grade for this repo.
+   test. The identification trap is documented in our own results: specs
+   cut length after vol rises, so crowding is partly a *lagged* vol proxy —
+   hence incremental R² over a HAR-style baseline (Corsi 2009), never a raw
+   correlation. **RAN — null** (`vol_forecast.py`,
+   `research/VOL-FORECAST.md`): partial correlation of crowding with the
+   HAR residual −0.0013, pooled p=0.85, mean ΔR² +0.002 against HAR's
+   0.223. Instructive detail: within-commodity, crowding vs its own week's
+   vol is only +0.011 — the cross-sectional vol tilt is a *between*-
+   commodity fact, which is why it cannot forecast within a market's own
+   timeline. The pre-specified extremeness secondary printed p=0.004 but at
+   ~0.02 partial correlation, positive in only 15/24 commodities (sign test
+   p=0.31): flagged, not promoted.
+2. **Resolve the KRT tension: commercial flow, not MM flow.** KRT's
+   liquidity premium uses *commercial* position changes, and Maréchal finds
+   it robust post-2004. **RAN — null** (`hedger_flow.py`,
+   `research/HEDGER-FLOW.md`): 1,080 portfolio-weeks 2005–2025, hedger flow
+   +1.4%/yr p=0.71, IC −0.0008, orthogonalised +0.2%/yr p=0.96. The
+   strongest surviving positioning claim in the literature does not survive
+   a 1-week publication lag in this universe. Also learned: the reversal
+   benchmark itself is sample-dependent (+8.4%/yr p=0.073 here vs +20.6%
+   p=0.000 on 2015+), one more reason not to chase it.
 3. **Hong & Yogo 2012 aggregate OI growth** — the one unrefuted
    positioning-adjacent predictor (+0.73%/mo per SD, monthly, index-level,
    macro-timing). A different question (timing the asset class, not picking
    commodities), needs a monthly aggregate frame, and prices here only
-   start in 2000 — but the OI column is already in every file.
-4. **Email upgrades (not research):** lead the weekly narrative with
-   attribution ("specs bought/sold X contracts into this week's ±Y% move");
-   add an open-interest column and flag OI collapse in one-sided markets
-   (the cocoa lesson); optionally a Working's T figure per market for the
-   structural lane. All descriptive, all consistent with the no-forecast
-   footer.
+   start in 2000 — but the OI column is already in every file. **Not run** —
+   the only remaining open item on this list.
+4. **Email upgrades (not research).** **DONE** (analysis.py, 2026-08-27):
+   attribution phrasing in the headline and bullets (`_flow_read`), an
+   "OI (wk)" column, and a "Fragility watch" section that fires on
+   positioning extreme + bottom-decile OI contraction (self-calibrated per
+   market). Working's T deliberately deferred: slow-moving structural
+   metric, adds table width without changing any weekly decision — revisit
+   if the structural lane ever becomes the point. All descriptive, all
+   consistent with the no-forecast footer.
 
 ## 6. What is settled and should stay settled
 

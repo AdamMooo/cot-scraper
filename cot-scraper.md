@@ -53,6 +53,24 @@ data" turned out to be the real ask, not just downloading. Text-only stuck throu
 
 ## Recent Changes
 
+- 2026-08-27 (the applications became features, and the last two tests ran): Executed
+  everything the survey ranked. **Both remaining research questions are nulls.**
+  `hedger_flow.py` (commercial flow through the mm_flow harness, 1,080 weeks 2005-2025):
+  +1.4%/yr p=0.71, IC -0.0008 — the KRT liquidity premium, the strongest surviving
+  positioning claim in the literature, does not survive a 1-week publication lag; the
+  reversal benchmark itself proved sample-dependent (+8.4%/yr p=0.073 here vs +20.6% on
+  2015+). `vol_forecast.py` (crowding vs next-week realized vol, incremental to a HAR
+  baseline built from new `prices.daily_closes`): partial corr -0.0013, p=0.85, dR2 +0.002
+  vs HAR's 0.223 — the crowding/vol link is entirely vol clustering through a lagged proxy,
+  and the vol tilt turns out to be a between-commodity fact (within-commodity contemp corr
+  just +0.011). One loose thread flagged-not-promoted: the pre-specified extremeness
+  secondary (p=0.004, but ~0.02 partial corr, 15/24 breadth, sign p=0.31). **The weekly
+  email now carries the three supported uses**: `_flow_read` attribution in headline and
+  bullets ("specs bought the rally" / "a rally against spec selling"), an OI (wk) column,
+  and a Fragility watch section (positioning extreme + bottom-decile OI contraction,
+  self-calibrated per market — the nickel/cocoa lesson). Research program complete: five
+  studies, five nulls, and a report that finally says what the data can honestly say.
+
 - 2026-08-27 (applications survey — what the data IS for): Ran a three-lane deep-research
   survey (return-prediction literature, positioning-as-risk literature, documented
   practitioner usage) and synthesised it into `research/APPLICATIONS.md`. Headlines: our

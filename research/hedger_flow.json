@@ -1,0 +1,236 @@
+{
+  "generated": "2026-08-27",
+  "question": "Does COMMERCIAL (hedger) flow rank next week's relative returns after a realistic publication lag, beyond what the formation week's return tells you?",
+  "portfolio": "equal-weighted terciles, long highest hedger flow, short lowest, 1-week entry lag, 1-week hold",
+  "weeks": 1080,
+  "first_week": "2005-04-19",
+  "last_week": "2025-12-23",
+  "avg_commodities_per_week": 23.130555555555556,
+  "hedger_flow": {
+    "weeks": 1080,
+    "mean_weekly": 0.0002683917739170098,
+    "annualised": 0.013956372243684508,
+    "p_value": 0.7084
+  },
+  "hf_ci95_low": -0.001189755733912668,
+  "hf_ci95_high": 0.0017404480906347394,
+  "reversal": {
+    "weeks": 1080,
+    "mean_weekly": 0.0016156702446504623,
+    "annualised": 0.08401485272182403,
+    "p_value": 0.0734
+  },
+  "orthogonalised_hedger_flow": {
+    "weeks": 1080,
+    "mean_weekly": 3.960035635177477e-05,
+    "annualised": 0.002059218530292288,
+    "p_value": 0.956
+  },
+  "ic": {
+    "hedger_flow": {
+      "mean": -0.0007613210773420576,
+      "p_value": 0.9136
+    },
+    "reversal": {
+      "mean": -0.005399822607516153,
+      "p_value": 0.5662
+    },
+    "orthogonalised_hedger_flow": {
+      "mean": -0.002104754816626833,
+      "p_value": 0.778
+    }
+  },
+  "risk_parity": {
+    "weeks": 1080,
+    "mean_weekly": -3.1074846067070497e-05,
+    "annualised": -0.0016158919954876658,
+    "p_value": 0.967
+  },
+  "equal_weight_matched": {
+    "weeks": 1080,
+    "mean_weekly": 0.00023304342457944614,
+    "annualised": 0.0121182580781312,
+    "p_value": 0.7562
+  },
+  "vol_gap_mean": 0.0003764980868823464,
+  "vol_gap_p_value": 0.2166,
+  "hf_reversal_spread_correlation": 0.11652020456916354,
+  "tail_weeks": 20,
+  "tail_net": -0.24831470205025596,
+  "tail_largest_week": 0.15166580058086326,
+  "tail_most_negative_week": -0.1073144869884128,
+  "series_total": 0.28986311583037055,
+  "jackknife": [
+    {
+      "dropped": "Wheat (SRW)",
+      "weeks": 1080,
+      "mean_weekly_spread": 3.509631090503527e-05,
+      "annualised": 0.001825008167061834,
+      "p_value": 0.97
+    },
+    {
+      "dropped": "Coffee",
+      "weeks": 1071,
+      "mean_weekly_spread": -4.629586650025722e-05,
+      "annualised": -0.002407385058013375,
+      "p_value": 0.9555
+    },
+    {
+      "dropped": "WTI Crude",
+      "weeks": 1080,
+      "mean_weekly_spread": 6.323949650390679e-05,
+      "annualised": 0.003288453818203153,
+      "p_value": 0.935
+    },
+    {
+      "dropped": "Feeder Cattle",
+      "weeks": 1080,
+      "mean_weekly_spread": 7.118719026584889e-05,
+      "annualised": 0.0037017338938241423,
+      "p_value": 0.927
+    },
+    {
+      "dropped": "Live Cattle",
+      "weeks": 1080,
+      "mean_weekly_spread": 9.273284814290292e-05,
+      "annualised": 0.004822108103430952,
+      "p_value": 0.9085
+    },
+    {
+      "dropped": "Gold",
+      "weeks": 1080,
+      "mean_weekly_spread": 8.738844303157841e-05,
+      "annualised": 0.0045441990376420775,
+      "p_value": 0.9025
+    },
+    {
+      "dropped": "Rough Rice",
+      "weeks": 1071,
+      "mean_weekly_spread": -0.00010362848188120523,
+      "annualised": -0.005388681057822672,
+      "p_value": 0.902
+    },
+    {
+      "dropped": "RBOB Gasoline",
+      "weeks": 1080,
+      "mean_weekly_spread": -0.00012639067353537647,
+      "annualised": -0.006572315023839577,
+      "p_value": 0.869
+    },
+    {
+      "dropped": "Silver",
+      "weeks": 1080,
+      "mean_weekly_spread": 0.00018536137052519287,
+      "annualised": 0.009638791267310029,
+      "p_value": 0.83
+    },
+    {
+      "dropped": "Cocoa",
+      "weeks": 1071,
+      "mean_weekly_spread": -0.00017524505102050722,
+      "annualised": -0.009112742653066375,
+      "p_value": 0.8295
+    },
+    {
+      "dropped": "Soybean Meal",
+      "weeks": 1080,
+      "mean_weekly_spread": 0.00016163543038085637,
+      "annualised": 0.008405042379804531,
+      "p_value": 0.8165
+    },
+    {
+      "dropped": "NY Harbor ULSD",
+      "weeks": 1080,
+      "mean_weekly_spread": 0.0001849929619612666,
+      "annualised": 0.009619634021985863,
+      "p_value": 0.8065
+    },
+    {
+      "dropped": "Platinum",
+      "weeks": 1071,
+      "mean_weekly_spread": 0.00019138349811165652,
+      "annualised": 0.009951941901806139,
+      "p_value": 0.805
+    },
+    {
+      "dropped": "Sugar",
+      "weeks": 1071,
+      "mean_weekly_spread": 0.00021401353343826368,
+      "annualised": 0.011128703738789712,
+      "p_value": 0.7955
+    },
+    {
+      "dropped": "Palladium",
+      "weeks": 1071,
+      "mean_weekly_spread": 0.0002400600778850752,
+      "annualised": 0.01248312405002391,
+      "p_value": 0.795
+    },
+    {
+      "dropped": "Lean Hogs",
+      "weeks": 1080,
+      "mean_weekly_spread": 0.0002138629244016789,
+      "annualised": 0.011120872068887303,
+      "p_value": 0.789
+    },
+    {
+      "dropped": "Cotton",
+      "weeks": 1071,
+      "mean_weekly_spread": 0.00020989286141106337,
+      "annualised": 0.010914428793375295,
+      "p_value": 0.7685
+    },
+    {
+      "dropped": "Copper",
+      "weeks": 1080,
+      "mean_weekly_spread": 0.00023392209922012969,
+      "annualised": 0.012163949159446744,
+      "p_value": 0.761
+    },
+    {
+      "dropped": "Corn",
+      "weeks": 1080,
+      "mean_weekly_spread": 0.0002494022314735456,
+      "annualised": 0.01296891603662437,
+      "p_value": 0.7415
+    },
+    {
+      "dropped": "Wheat (HRW)",
+      "weeks": 1080,
+      "mean_weekly_spread": 0.0003104265423962408,
+      "annualised": 0.016142180204604523,
+      "p_value": 0.703
+    },
+    {
+      "dropped": "Natural Gas",
+      "weeks": 1080,
+      "mean_weekly_spread": 0.00036778485083709865,
+      "annualised": 0.01912481224352913,
+      "p_value": 0.674
+    },
+    {
+      "dropped": "Soybean Oil",
+      "weeks": 1071,
+      "mean_weekly_spread": 0.00037108985554186707,
+      "annualised": 0.019296672488177086,
+      "p_value": 0.6345
+    },
+    {
+      "dropped": "Soybeans",
+      "weeks": 1080,
+      "mean_weekly_spread": 0.0003842134914019916,
+      "annualised": 0.019979101552903562,
+      "p_value": 0.6315
+    },
+    {
+      "dropped": "Class III Milk",
+      "weeks": 1080,
+      "mean_weekly_spread": 0.0006176546119759841,
+      "annualised": 0.032118039822751174,
+      "p_value": 0.4165
+    }
+  ],
+  "jackknife_specs_above_05": 24,
+  "verdict": "no detectable information in commercial flow after a 1-week publication lag -- KRT's liquidity premium does not survive realistic entry in this universe",
+  "caveat": "price-only returns, excludes roll yield and costs; measures information, not tradability"
+}

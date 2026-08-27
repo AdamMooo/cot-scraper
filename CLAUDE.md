@@ -1,4 +1,4 @@
-Last updated: 2026-08-27 | Status: FULLY LIVE — secrets set, five successful CI runs, HTML email confirmed sending from CI (run 33086450391). Research question CLOSED: three studies, three angles, no investable information in COT positioning (see "The empirical finding" and "Managed Money" below)
+Last updated: 2026-08-27 | Status: FULLY LIVE — secrets set, HTML email confirmed sending from CI. Research program COMPLETE: five studies (levels, cross-section, MM flow, commercial flow, vol-vs-HAR), all nulls — no investable information in COT positioning, for returns or for vol. The report now carries the three uses the data does support: attribution, OI/fragility watch, structural context (see "Weekly automation" and research/APPLICATIONS.md)
 
 ## Repo Card
 
@@ -88,6 +88,8 @@ files, same as the base kit's own design intent:
 | `cross_section.py` | Cross-sectional test: rank all commodities against each other weekly, long least-crowded vs short most-crowded. Exists because the time-series test is sample-starved (8 episodes per commodity); this gets 1,348 portfolio-weeks. The nominally-significant spread turns out to be a volatility tilt, not positioning -- see "The cross-sectional attempt" below before touching it |
 | `managed_money.py` | Diagnostic on the Disaggregated report's Managed Money columns: verifies the column indices against every year-file, then measures level-vs-flow persistence and the flow/return correlation. Ranks no signal and makes no claim about returns -- it exists to say what the eventual test has to control for. See "Managed Money" below |
 | `mm_flow.py` | The test `managed_money.py` specified, run 2026-08-27: Managed Money flow ranked cross-sectionally, orthogonalised against the formation-week return, raced head-to-head against pure short-term reversal, with all of `cross_section.py`'s controls carried over (entry lag, point-in-time percentiles, IC, risk-parity legs, jackknife). **Verdict: flow has zero cross-sectional information** (IC +0.0002, p=0.99), and the no-CFTC reversal benchmark beats it decisively. This closed the research question. See "Managed Money" below and `research/MM-FLOW.md` |
+| `hedger_flow.py` | The KRT follow-up `research/APPLICATIONS.md` ranked #2: COMMERCIAL flow (legacy columns 11/12, verified against the 1986 and 2025 headers) through the same harness as `mm_flow.py`, targeting the one positioning premium that survives post-2004 replication (Kang-Rouwenhorst-Tang 2020's liquidity premium, Marechal 2023). **Verdict: null after a 1-week publication lag** -- +1.4%/yr p=0.71, IC -0.0008, orthogonalised +0.2%/yr p=0.96. Note the sign conventions differ from mm_flow (hedgers are contrarians; the effect would print POSITIVE spread/IC). Reversal itself is weaker on this longer 2005+ sample (+8.4%/yr, p=0.073) than on mm_flow's 2015+ (+20.6%) -- the reversal side-finding is sample-dependent too. `research/HEDGER-FLOW.md` |
+| `vol_forecast.py` | The follow-up ranked #1 (no published commodity version exists): does crowding forecast next week's realized vol incrementally to a HAR baseline (Corsi 2009; log RV on its 1wk/4wk/13wk history, RV from daily closes via `prices.daily_closes`, per-commodity OLS in pure Python)? **Verdict: primary null** -- partial corr -0.0013, pooled p=0.85, mean dR2 +0.002 against HAR's 0.223. The pre-specified SECONDARY (extremeness \|pct-50\|) prints +0.02 at p=0.004 but is economically negligible (~0.02 partial corr) and narrow (positive in 15/24, sign test p=0.31) -- **flagged, not promoted**; promoting it would need its own pre-specified test. Also documents that the cross-sectional vol tilt is a BETWEEN-commodity fact: within-commodity, crowding vs own-week vol is only +0.011. `research/VOL-FORECAST.md` |
 | `roll_check.py` | Data-quality diagnostic for `prices.py`: bucket weekly \|return\| by day-of-month to find contract-roll gaps in Yahoo's non-roll-adjusted continuous series. Flags 3 of 24 (Class III Milk, Lean Hogs, Live Cattle). Standalone, no effect on the weekly job |
 
 ## Weekly automation
@@ -145,6 +147,17 @@ out to be "collect and analyze every week," not "hand someone an exe."
   - `_MIN_OPEN_INTEREST` was dropped once the ticker allow-list existed --
     every whitelisted benchmark commodity already clears any reasonable
     liquidity bar, so a separate threshold added nothing
+  - **Attribution, open interest and fragility (added 2026-08-27, per the
+    applications survey).** `_flow_read` names what the week's move was made
+    of in the headline and bullets ("specs bought the rally" / "a rally
+    against spec selling") -- descriptive attribution, the use the +0.133
+    same-week flow/return correlation actually supports. The table gained an
+    "OI (wk)" column, and a "Fragility watch" section fires when a market is
+    at a positioning extreme AND its open-interest change is in the bottom
+    decile of that market's own history (self-calibrated, no magic
+    threshold) -- the one-sided-crowd-plus-shrinking-market shape the squeeze
+    episode record points at (nickel 2022, cocoa 2024; see
+    research/APPLICATIONS.md). None of it forecasts; all of it describes
   - **The report leads with a narrative, not a table.** A data table (even a
     filtered, price-annotated one) isn't analysis -- the user's words after
     the first version: "I DONT JUST WANT THE BENCHMARKS I WANT AN ACTUAL
@@ -158,7 +171,9 @@ out to be "collect and analyze every week," not "hand someone an exe."
     of the email
 - **`prices.py`** -- Yahoo Finance's public, unofficial, no-API-key chart
   endpoint (`query1.finance.yahoo.com/v8/finance/chart/<ticker>`), plain
-  `requests` through the shared session, no new dependency. Looks up the
+  `requests` through the shared session, no new dependency. `daily_closes`
+  (added 2026-08-27 for `vol_forecast.py`'s realized-vol measurement) shares
+  the fetch path with `weekly_closes`, cached as `<ticker>_daily.json`. Looks up the
   close at/before each of the two report dates being compared (COT dates are
   Tuesdays and nearly always trading days, but a holiday can shift things by
   a day or two, hence the small look-back window) rather than counting
@@ -428,12 +443,14 @@ attribution, crowding-as-fragility, structural monitoring -- with evidence
 grades, where our results sit in the literature (they reproduce the
 post-2015 consensus; Kang-Rouwenhorst-Tang 2020's two-premium decomposition
 explains why naive tests null out), and the only two follow-up tests that
-would qualify as new questions rather than re-ranking: crowding as a
-*volatility* forecaster incremental to a HAR baseline (no published
-commodity version exists), and commercial flow (not MM) raced against
-reversal, which targets the one published positioning premium that
-survives post-2004 replication (Maréchal 2023). Read it before proposing
-any new use of this data.
+qualified as new questions rather than re-ranking. **Both ran the same day
+and both are nulls** (`hedger_flow.py`, `vol_forecast.py` -- see the Key
+Files table above for the numbers). Every test this research program named
+has now been run: levels, cross-section, MM flow, commercial flow, and
+vol forecasting. The only loose thread on record is the vol test's tiny,
+narrow extremeness secondary (p=0.004 but ~0.02 partial corr, 15/24
+breadth), explicitly flagged-not-promoted. Read APPLICATIONS.md before
+proposing any new use of this data.
 
 ## Do Not Touch
 
