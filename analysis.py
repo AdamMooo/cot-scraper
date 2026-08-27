@@ -29,7 +29,7 @@ Public interface:
 import csv
 import json
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, timedelta
 from pathlib import Path
 
 import contracts
@@ -148,6 +148,8 @@ class Reading:
     pct: float
     change: int | None  # contracts vs prior report; None when no true prior week
     price_pct: float | None  # same-week price move, fraction
+    trend_13w: float | None  # 13-week price change, the trend perspective
+    range_52w: float | None  # latest close's position in its 52-week range, 0..1
     oi_change_pct: float | None  # open interest vs prior report, fraction
     oi_collapsing: bool  # this week's OI change in the bottom decile of its own history
 
@@ -180,10 +182,10 @@ def _collect(by_market: MarketHistory) -> list[Reading]:
         has_prior = gap <= _MAX_PLAUSIBLE_GAP_DAYS
         change = net - prior_net if has_prior else None
 
-        price_pct = None
-        if has_prior:
-            closes = prices.weekly_closes(commodity.ticker)
-            price_pct = prices.pct_change(closes, prior_date, as_of)
+        closes = prices.weekly_closes(commodity.ticker)
+        price_pct = prices.pct_change(closes, prior_date, as_of) if has_prior else None
+        trend_13w = prices.pct_change(closes, _days_back(as_of, 91), as_of)
+        range_52w = _range_position(closes, as_of)
 
         # OI collapse is flagged against the market's OWN distribution of
         # weekly OI changes rather than a fixed threshold -- what counts as a
@@ -202,8 +204,32 @@ def _collect(by_market: MarketHistory) -> list[Reading]:
         share = shares[-1][1]
         pct = 100.0 * sum(1 for v in values if v <= share) / len(values)
         out.append(Reading(name, commodity.sector, as_of, net, share, len(values), pct, change,
-                           price_pct, oi_change_pct, oi_collapsing))
+                           price_pct, trend_13w, range_52w, oi_change_pct, oi_collapsing))
     return out
+
+
+def _days_back(iso: str, days: int) -> str:
+    return (date.fromisoformat(iso) - timedelta(days=days)).isoformat()
+
+
+# Needs most of a year of weekly bars, or "position in the 52-week range" is
+# really position in whatever stub of history exists and reads as an extreme.
+_MIN_RANGE_WEEKS = 40
+
+
+def _range_position(closes: list[tuple[str, float]], as_of: str) -> float | None:
+    """Where the latest close sits in its trailing 52-week range, 0..1."""
+    last = prices.close_asof(closes, as_of)
+    if last is None:
+        return None
+    floor = _days_back(as_of, 365)
+    window = [c for d, c in closes if floor < d <= as_of]
+    if len(window) < _MIN_RANGE_WEEKS:
+        return None
+    lo, hi = min(window), max(window)
+    if hi == lo:
+        return None
+    return (last - lo) / (hi - lo)
 
 
 def _predictive_power_note() -> str:
@@ -251,7 +277,32 @@ def _flow_read(r: Reading) -> str | None:
     return "specs sold the break" if r.price_pct < 0 else "a rally against spec selling"
 
 
-def _fmt(r: Reading) -> str:
+# Below this 13-week move, calling a market "rising" or "falling" is noise.
+_FLAT_TREND = 0.02
+
+# "Near" the edge of the 52-week range, mirroring the positioning deciles.
+_RANGE_HIGH = 0.90
+_RANGE_LOW = 0.10
+
+
+def _trend_read(r: Reading) -> str | None:
+    """Pair the positioning extreme with the multi-week price trend: the same
+    market seen from both sides. Says whether the crowd sits with or against
+    what price has already done -- never what either will do next."""
+    if r.trend_13w is None or not (r.pct >= _EXTREME_HIGH or r.pct <= _EXTREME_LOW):
+        return None
+    long_side = r.pct >= _EXTREME_HIGH
+    rng = f", {r.range_52w*100:.0f}% of its 52wk range" if r.range_52w is not None else ""
+    px = f"price {r.trend_13w*100:+.1f}% over 13wk{rng}"
+    if abs(r.trend_13w) < _FLAT_TREND:
+        return f"{px} -- a one-sided crowd in a sideways market"
+    if (r.trend_13w > 0) == long_side:
+        return f"{px} -- the crowd is positioned with the trend"
+    against = "long into a falling market" if long_side else "short into a rising market"
+    return f"{px} -- positioning and trend diverge: specs are crowded {against}"
+
+
+def _fmt(r: Reading, with_trend: bool = False) -> str:
     bits = [f"{_ordinal(r.pct)} pct of {r.weeks:,}wk", f"net {r.share*100:+.1f}% of open interest"]
     if r.change is not None:
         bits.append(f"{r.change:+,} contracts this wk")
@@ -260,7 +311,11 @@ def _fmt(r: Reading) -> str:
     read = _flow_read(r)
     if read:
         bits.append(read)
-    return f"**{r.name}**: {', '.join(bits)}"
+    line = f"**{r.name}**: {', '.join(bits)}"
+    trend = _trend_read(r) if with_trend else None
+    if trend:
+        line += f". {trend[0].upper()}{trend[1:]}"
+    return line
 
 
 # The scenario mechanics of an extreme: which way the accelerant points.
@@ -296,6 +351,13 @@ def build_report(by_market: MarketHistory, title: str = "Legacy Report (Futures 
     headline = f"{len(rows)} commodities tracked. {len(longs) + len(shorts)} at a positioning extreme"
     if longs or shorts:
         headline += f" ({len(longs)} crowded long, {len(shorts)} crowded short)"
+        with_trend = sum(1 for r in longs if r.trend_13w is not None and r.trend_13w >= _FLAT_TREND) \
+            + sum(1 for r in shorts if r.trend_13w is not None and r.trend_13w <= -_FLAT_TREND)
+        against = sum(1 for r in longs if r.trend_13w is not None and r.trend_13w <= -_FLAT_TREND) \
+            + sum(1 for r in shorts if r.trend_13w is not None and r.trend_13w >= _FLAT_TREND)
+        if with_trend or against:
+            headline += (f"; of those, {with_trend} sit with the 13-week price trend "
+                         f"and {against} against it")
     if movers:
         m = movers[0]
         headline += f". Biggest shift: {m.name} {m.change:+,} contracts"
@@ -310,15 +372,18 @@ def build_report(by_market: MarketHistory, title: str = "Legacy Report (Futures 
     # difference against and every change/price cell would read "n/a". Say
     # that once here instead of 24 times in the table.
     if not movers:
-        lines += ["Week over week changes and price moves are not shown yet: only one weekly "
-                  "snapshot has accumulated so far, so there is no prior report to compare "
-                  "against. These fill in from the next run onward.", ""]
+        lines += ["Week-over-week comparisons (position change, same-week price, OI change) are "
+                  "not shown yet: only one weekly snapshot has accumulated so far, so there is "
+                  "no prior report to difference against. They fill in from the next run onward; "
+                  "the 13-week trend and 52-week range columns do not need a prior report and "
+                  "are already live.", ""]
 
     if longs:
-        lines += ["## Crowded long", "", _LONG_MECHANICS, ""] + [f"- {_fmt(r)}" for r in longs] + [""]
+        lines += ["## Crowded long", "", _LONG_MECHANICS, ""] \
+            + [f"- {_fmt(r, with_trend=True)}" for r in longs] + [""]
     if shorts:
-        lines += ["## Crowded short", "", _SHORT_MECHANICS, ""] + [f"- {_fmt(r)}"
-                                                                   for r in reversed(shorts)] + [""]
+        lines += ["## Crowded short", "", _SHORT_MECHANICS, ""] \
+            + [f"- {_fmt(r, with_trend=True)}" for r in reversed(shorts)] + [""]
 
     # The squeeze episode record (research/APPLICATIONS.md: nickel 2022,
     # cocoa 2024) says the dangerous shape is one-sided positioning while the
@@ -337,21 +402,47 @@ def build_report(by_market: MarketHistory, title: str = "Legacy Report (Futures 
                          f"contraction for this market")
         lines.append("")
 
+    # The same markets viewed price-first: the crowded sections ask "where is
+    # positioning stretched, and what is price doing there" -- this asks
+    # "where is PRICE stretched, and how are specs positioned there". Near a
+    # 52-week boundary the two views either tell one story or visibly
+    # disagree, and that pairing is the report's whole point.
+    at_highs = sorted([r for r in rows if r.range_52w is not None and r.range_52w >= _RANGE_HIGH],
+                      key=lambda r: r.range_52w, reverse=True)
+    at_lows = sorted([r for r in rows if r.range_52w is not None and r.range_52w <= _RANGE_LOW],
+                     key=lambda r: r.range_52w)
+    if at_highs or at_lows:
+        lines += ["## Price trend snapshot", "",
+                  "Markets trading near the edge of their own 52-week range, with speculative "
+                  "positioning alongside -- the price-first view of the same pairing the "
+                  "sections above read positioning-first.", ""]
+        for label, group in (("near 52wk highs", at_highs), ("near 52wk lows", at_lows)):
+            for r in group:
+                trend = f", {r.trend_13w*100:+.1f}% over 13wk" if r.trend_13w is not None else ""
+                lines.append(f"- **{r.name}** ({label}): {r.range_52w*100:.0f}% of its 52wk "
+                             f"range{trend}; specs at the {_ordinal(r.pct)} percentile of "
+                             f"positioning history")
+        lines.append("")
+
     if movers:
         lines += ["## Biggest shifts this week", ""] + [f"- {_fmt(r)}" for r in movers[:5]] + [""]
 
     lines += ["## All commodities", "",
               "Percentile ranks net position as a share of open interest, so it is not distorted "
-              "by decades of growth in market size.",
+              "by decades of growth in market size. The last three columns are the price "
+              "perspective: this week's move, the 13-week trend, and where the latest close sits "
+              "in its 52-week range.",
               "",
-              "| Commodity | Sector | Net contracts | % of OI | vs prior wk | OI (wk) | Percentile | History | Price (wk) |",
-              "|---|---|---|---|---|---|---|---|---|"]
+              "| Commodity | Sector | Net contracts | % of OI | vs prior wk | OI (wk) | Percentile | History | Price (wk) | Price (13wk) | 52wk range |",
+              "|---|---|---|---|---|---|---|---|---|---|---|"]
     for r in rows:
         change = f"{r.change:+,}" if r.change is not None else "n/a"
         oi_move = f"{r.oi_change_pct*100:+.1f}%" if r.oi_change_pct is not None else "n/a"
         price = f"{r.price_pct*100:+.1f}%" if r.price_pct is not None else "n/a"
+        trend = f"{r.trend_13w*100:+.1f}%" if r.trend_13w is not None else "n/a"
+        rng = f"{r.range_52w*100:.0f}%" if r.range_52w is not None else "n/a"
         lines.append(f"| {r.name} | {r.sector} | {r.net:+,} | {r.share*100:+.1f}% | {change} | "
-                     f"{oi_move} | {_ordinal(r.pct)} | {r.weeks:,}wk | {price} |")
+                     f"{oi_move} | {_ordinal(r.pct)} | {r.weeks:,}wk | {price} | {trend} | {rng} |")
 
     note = _predictive_power_note()
     if note:

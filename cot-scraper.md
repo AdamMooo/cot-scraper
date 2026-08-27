@@ -53,6 +53,18 @@ data" turned out to be the real ask, not just downloading. Text-only stuck throu
 
 ## Recent Changes
 
+- 2026-08-27 (the trend perspective): The report now carries both views of every market --
+  COT positioning AND the underlying price trend -- computed from the weekly closes
+  `prices.py` already caches, no new fetch. Per commodity: 13-week price change and the
+  close's position in its own 52-week range. Crowded bullets say whether the crowd sits
+  *with* the trend or *diverges* from it (flat band 2%/13wk); the headline counts extremes
+  with-vs-against trend; a new "Price trend snapshot" section inverts the lens (markets at
+  52-week range edges, spec percentile alongside); the table gained Price (13wk) and 52wk
+  range columns. These need no prior COT snapshot, so this week's report -- which has only
+  one accumulated 2026 snapshot and shows "n/a" for all week-over-week cells -- is already
+  informative. `reports/2026-08-27.md` and `latest.md` regenerated in the new format.
+  Still strictly descriptive; the footer's null-result citations are unchanged.
+
 - 2026-08-27 (the applications became features, and the last two tests ran): Executed
   everything the survey ranked. **Both remaining research questions are nulls.**
   `hedger_flow.py` (commercial flow through the mm_flow harness, 1,080 weeks 2005-2025):

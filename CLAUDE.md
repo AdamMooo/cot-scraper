@@ -163,6 +163,22 @@ out to be "collect and analyze every week," not "hand someone an exe."
     meet mechanical selling from exiting longs...") -- WHO can act next is
     arithmetic even though direction is a measured coin flip. None of it
     forecasts; all of it describes
+  - **The trend perspective (added 2026-08-27).** The report pairs the
+    positioning view with the underlying price trend, both computed from the
+    weekly closes `prices.py` already caches: a 13-week price change and the
+    close's position in its own 52-week range (`_range_position`, needs
+    >= 40 weekly bars or a stub of history reads as an extreme). Three
+    places: crowded bullets get `_trend_read` (crowd positioned WITH the
+    trend / positioning-and-trend DIVERGE / sideways, flat band
+    `_FLAT_TREND` = 2% per 13wk); the headline counts extremes with vs
+    against trend; and a "Price trend snapshot" section inverts the lens --
+    markets near their 52-week high/low (`_RANGE_HIGH`/`_RANGE_LOW`,
+    mirroring the positioning deciles) with the spec percentile alongside.
+    The table gained "Price (13wk)" and "52wk range" columns; these need no
+    prior COT snapshot, so they are live even in a week where the
+    week-over-week cells are still "n/a". All descriptive: where price HAS
+    gone and whether the crowd sits with or against that, never what either
+    does next
   - **The report leads with a narrative, not a table.** A data table (even a
     filtered, price-annotated one) isn't analysis -- the user's words after
     the first version: "I DONT JUST WANT THE BENCHMARKS I WANT AN ACTUAL
