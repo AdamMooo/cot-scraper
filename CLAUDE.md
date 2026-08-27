@@ -1,4 +1,4 @@
-Last updated: 2026-08-27 | Status: pushed to `AdamMooo/cot-scraper`; weekly automation live pending the three Gmail secrets. Research question CLOSED: three studies, three angles, no investable information in COT positioning (see "The empirical finding" and "Managed Money" below)
+Last updated: 2026-08-27 | Status: FULLY LIVE — secrets set, five successful CI runs, HTML email confirmed sending from CI (run 33086450391). Research question CLOSED: three studies, three angles, no investable information in COT positioning (see "The empirical finding" and "Managed Money" below)
 
 ## Repo Card
 

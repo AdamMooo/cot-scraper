@@ -15,10 +15,11 @@ then pivoted the same day once the actual goal came up: an unattended weekly pip
 analysis, not an exe for someone else to run. The GUI still works and wasn't removed, but
 it's no longer the point.
 
-Built, tested locally end-to-end, and **pushed to `AdamMooo/cot-scraper`**. The only thing
-between it and a live Friday run is the three GitHub Actions secrets (Gmail App Password),
-which have to be set from Adam's own terminal -- credential setup Claude won't do. See
-`README.md` "One-time setup" for the exact commands.
+**Fully live as of 2026-08-27.** The Gmail secrets are set (five successful
+workflow_dispatch runs on 2026-08-25/26 prove it -- the commit step only runs after the
+email step succeeds), and a manual test run confirmed the new HTML-formatted email sends
+from CI. Friday's cron (21:30 UTC) needs nothing; the first email with real week-over-week
+comparisons arrives on its own once CFTC posts the as-of 2026-08-25 data.
 
 The download/report half is finished. The research half is settled too, in the negative:
 the positioning signal was tested three ways and the one nominally-significant result turns
@@ -179,9 +180,7 @@ data" turned out to be the real ask, not just downloading. Text-only stuck throu
 
 ## Known Issues
 
-The three GitHub Actions secrets (`GMAIL_USER`, `GMAIL_APP_PASSWORD`, `MAIL_TO`) aren't
-set, so the Friday workflow will run the download and commit the report but fail at the
-email step. Yahoo's continuous front-month series is not roll-adjusted, and
+Yahoo's continuous front-month series is not roll-adjusted, and
 `roll_check.py` shows 3 of 24 series are materially contaminated (Class III Milk, Lean
 Hogs, Live Cattle) -- but this is a data-quality wart, not a blocker: removing those three
 makes the cross-sectional effect *stronger*, so roll gaps were adding noise rather than
