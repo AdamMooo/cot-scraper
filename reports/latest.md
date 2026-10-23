@@ -1,29 +1,42 @@
-# COT Weekly, report as of 2026-10-13
+# COT Weekly, report as of 2026-10-20
 
-24 commodities tracked. 5 at a positioning extreme (2 crowded long, 3 crowded short). Biggest shift: Corn -94,106 contracts.
+24 commodities tracked. 5 at a positioning extreme (2 crowded long, 3 crowded short); of those, 4 sit with the 13-week price trend and 0 against it. Biggest shift: Corn -71,678 contracts into a -2.9% week -- specs sold the break.
 
 ## Crowded long
 
 At these levels the accelerant points down: a break lower would meet mechanical selling from exiting spec longs, while further upside needs new buyers -- specs have little room left to add. Which scenario arrives is the coin flip the footer describes; its speed is not.
 
-- **Soybean Meal**: 98th pct of 1,907wk, net +33.7% of open interest, -5,355 contracts this wk
-- **Gold**: 98th pct of 1,906wk, net +52.4% of open interest, -2,456 contracts this wk
+- **Soybean Meal**: 98th pct of 1,908wk, net +32.4% of open interest, -11,302 contracts this wk, price -2.7%, specs sold the break. Price +4.8% over 13wk, 68% of its 52wk range -- the crowd is positioned with the trend
+- **Gold**: 96th pct of 1,907wk, net +49.7% of open interest, -8,014 contracts this wk, price -2.9%, specs sold the break. Price -0.3% over 13wk, 5% of its 52wk range -- a one-sided crowd in a sideways market
 
 ## Crowded short
 
 At these levels the accelerant points up: a bounce can be amplified by spec short-covering, while further downside needs new sellers -- specs have little room left to add. Which scenario arrives is the coin flip the footer describes; its speed is not.
 
-- **Class III Milk**: 0th pct of 1,479wk, net -37.6% of open interest, -1,566 contracts this wk
-- **Lean Hogs**: 1st pct of 1,907wk, net -27.6% of open interest, -5,319 contracts this wk
-- **Palladium**: 7th pct of 1,832wk, net -34.9% of open interest, -1,061 contracts this wk
+- **Class III Milk**: 0th pct of 1,480wk, net -32.8% of open interest, +1,610 contracts this wk, price +0.1%, specs bought the rally. Price -3.2% over 13wk, 22% of its 52wk range -- the crowd is positioned with the trend
+- **Lean Hogs**: 1st pct of 1,908wk, net -26.3% of open interest, +5,057 contracts this wk, price -2.1%, a drop against spec buying. Price -36.3% over 13wk, 0% of its 52wk range -- the crowd is positioned with the trend
+- **Palladium**: 7th pct of 1,833wk, net -36.7% of open interest, -1,055 contracts this wk, price -5.5%, specs sold the break. Price -15.6% over 13wk, 0% of its 52wk range -- the crowd is positioned with the trend
+
+## Price trend snapshot
+
+Markets trading near the edge of their own 52-week range, with speculative positioning alongside -- the price-first view of the same pairing the sections above read positioning-first.
+
+- **Rough Rice** (near 52wk highs): 100% of its 52wk range, +24.9% over 13wk; specs at the 88th percentile of positioning history
+- **NY Harbor ULSD** (near 52wk highs): 96% of its 52wk range, +18.0% over 13wk; specs at the 60th percentile of positioning history
+- **Sugar** (near 52wk highs): 90% of its 52wk range, +36.3% over 13wk; specs at the 68th percentile of positioning history
+- **Palladium** (near 52wk lows): 0% of its 52wk range, -15.6% over 13wk; specs at the 7th percentile of positioning history
+- **Lean Hogs** (near 52wk lows): 0% of its 52wk range, -36.3% over 13wk; specs at the 1st percentile of positioning history
+- **Platinum** (near 52wk lows): 4% of its 52wk range, -1.6% over 13wk; specs at the 27th percentile of positioning history
+- **Gold** (near 52wk lows): 5% of its 52wk range, -0.3% over 13wk; specs at the 96th percentile of positioning history
+- **Natural Gas** (near 52wk lows): 10% of its 52wk range, -2.6% over 13wk; specs at the 18th percentile of positioning history
 
 ## Biggest shifts this week
 
-- **Corn**: 77th pct of 1,907wk, net +19.4% of open interest, -94,106 contracts this wk
-- **Sugar**: 69th pct of 1,901wk, net +19.2% of open interest, +9,699 contracts this wk
-- **Wheat (HRW)**: 41st pct of 1,907wk, net +3.1% of open interest, -9,269 contracts this wk
-- **Soybean Meal**: 98th pct of 1,907wk, net +33.7% of open interest, -5,355 contracts this wk
-- **Lean Hogs**: 1st pct of 1,907wk, net -27.6% of open interest, -5,319 contracts this wk
+- **Corn**: 67th pct of 1,908wk, net +15.6% of open interest, -71,678 contracts this wk, price -2.9%, specs sold the break
+- **Soybean Oil**: 70th pct of 1,908wk, net +14.3% of open interest, -27,696 contracts this wk, price -0.6%, specs sold the break
+- **Soybeans**: 78th pct of 1,908wk, net +22.5% of open interest, -24,503 contracts this wk, price -0.7%, specs sold the break
+- **Wheat (SRW)**: 35th pct of 1,908wk, net -5.7% of open interest, -11,664 contracts this wk, price -5.4%, specs sold the break
+- **Soybean Meal**: 98th pct of 1,908wk, net +32.4% of open interest, -11,302 contracts this wk, price -2.7%, specs sold the break
 
 ## All commodities
 
@@ -31,30 +44,30 @@ Percentile ranks net position as a share of open interest, so it is not distorte
 
 | Commodity | Sector | Net contracts | % of OI | vs prior wk | OI (wk) | Percentile | History | Price (wk) | Price (13wk) | 52wk range |
 |---|---|---|---|---|---|---|---|---|---|---|
-| Soybean Meal | Grains | +217,302 | +33.7% | -5,355 | +1.9% | 98th | 1,907wk | n/a | n/a | n/a |
-| Gold | Metals | +207,879 | +52.4% | -2,456 | +0.1% | 98th | 1,906wk | n/a | n/a | n/a |
-| Rough Rice | Grains | +3,496 | +23.8% | +487 | +2.1% | 87th | 1,869wk | n/a | n/a | n/a |
-| Soybeans | Grains | +271,099 | +25.3% | -2,797 | -4.4% | 87th | 1,907wk | n/a | n/a | n/a |
-| Copper | Metals | +68,520 | +21.8% | -914 | +3.2% | 86th | 1,906wk | n/a | n/a | n/a |
-| RBOB Gasoline | Energy | +75,461 | +22.2% | +4,930 | -2.4% | 84th | 1,905wk | n/a | n/a | n/a |
-| Soybean Oil | Grains | +109,323 | +19.3% | -1,956 | +3.0% | 82nd | 1,907wk | n/a | n/a | n/a |
-| Cotton | Softs | +94,307 | +23.8% | -2,051 | +3.5% | 78th | 1,905wk | n/a | n/a | n/a |
-| Corn | Grains | +358,367 | +19.4% | -94,106 | -0.8% | 77th | 1,907wk | n/a | n/a | n/a |
-| Sugar | Softs | +226,974 | +19.2% | +9,699 | +1.7% | 69th | 1,901wk | n/a | n/a | n/a |
-| NY Harbor ULSD | Energy | +14,753 | +5.5% | +3,758 | +10.6% | 64th | 1,904wk | n/a | n/a | n/a |
-| Coffee | Softs | +13,536 | +8.3% | -2,677 | +0.5% | 48th | 1,901wk | n/a | n/a | n/a |
-| Silver | Metals | +22,631 | +20.9% | -522 | +3.1% | 46th | 1,906wk | n/a | n/a | n/a |
-| WTI Crude | Energy | +100,343 | +5.3% | +1,283 | +0.6% | 45th | 1,905wk | n/a | n/a | n/a |
-| Wheat (SRW) | Grains | -17,606 | -3.5% | -1,558 | +1.9% | 42nd | 1,907wk | n/a | n/a | n/a |
-| Wheat (HRW) | Grains | +9,801 | +3.1% | -9,269 | +0.7% | 41st | 1,907wk | n/a | n/a | n/a |
-| Live Cattle | Livestock | +26,326 | +9.0% | -3,066 | -0.1% | 34th | 1,907wk | n/a | n/a | n/a |
-| Platinum | Metals | +12,973 | +19.1% | -995 | +3.0% | 28th | 1,906wk | n/a | n/a | n/a |
-| Feeder Cattle | Livestock | -1,217 | -1.9% | -282 | -1.3% | 20th | 1,907wk | n/a | n/a | n/a |
-| Natural Gas | Energy | -233,578 | -13.4% | +2,861 | -4.1% | 19th | 1,803wk | n/a | n/a | n/a |
-| Cocoa | Softs | -8,736 | -4.9% | +1,912 | -0.0% | 19th | 1,904wk | n/a | n/a | n/a |
-| Palladium | Metals | -8,078 | -34.9% | -1,061 | +10.0% | 7th | 1,832wk | n/a | n/a | n/a |
-| Lean Hogs | Livestock | -81,787 | -27.6% | -5,319 | -0.0% | 1st | 1,907wk | n/a | n/a | n/a |
-| Class III Milk | Livestock | -13,105 | -37.6% | -1,566 | +5.4% | 0th | 1,479wk | n/a | n/a | n/a |
+| Soybean Meal | Grains | +206,000 | +32.4% | -11,302 | -1.4% | 98th | 1,908wk | -2.7% | +4.8% | 68% |
+| Gold | Metals | +199,865 | +49.7% | -8,014 | +1.5% | 96th | 1,907wk | -2.9% | -0.3% | 5% |
+| Rough Rice | Grains | +3,636 | +24.8% | +140 | -0.2% | 88th | 1,870wk | +0.8% | +24.9% | 100% |
+| RBOB Gasoline | Energy | +69,589 | +20.6% | -5,872 | -0.8% | 79th | 1,906wk | -1.8% | -6.5% | 74% |
+| Soybeans | Grains | +246,596 | +22.5% | -24,503 | +2.0% | 78th | 1,908wk | -0.7% | +0.4% | 77% |
+| Copper | Metals | +57,397 | +17.5% | -11,123 | +4.2% | 78th | 1,907wk | -2.6% | +0.7% | 81% |
+| Cotton | Softs | +94,521 | +23.6% | +214 | +1.4% | 77th | 1,906wk | +1.0% | +2.9% | 68% |
+| Soybean Oil | Grains | +81,627 | +14.3% | -27,696 | +0.8% | 70th | 1,908wk | -0.6% | -10.2% | 63% |
+| Sugar | Softs | +228,816 | +18.9% | +1,842 | +2.7% | 68th | 1,902wk | -3.5% | +36.3% | 90% |
+| Corn | Grains | +286,689 | +15.6% | -71,678 | -0.5% | 67th | 1,908wk | -2.9% | -0.8% | 41% |
+| NY Harbor ULSD | Energy | +13,028 | +4.8% | -1,725 | +0.2% | 60th | 1,905wk | +0.7% | +18.0% | 96% |
+| Coffee | Softs | +20,132 | +11.8% | +6,596 | +4.5% | 56th | 1,902wk | +2.2% | -0.4% | 40% |
+| WTI Crude | Energy | +89,325 | +4.9% | -11,018 | -3.4% | 43rd | 1,906wk | -1.9% | +11.4% | 78% |
+| Live Cattle | Livestock | +30,730 | +10.6% | +4,404 | -1.3% | 40th | 1,908wk | +1.0% | +1.2% | 38% |
+| Silver | Metals | +19,795 | +17.4% | -2,836 | +5.1% | 38th | 1,907wk | -3.9% | -6.6% | 13% |
+| Wheat (SRW) | Grains | -29,270 | -5.7% | -11,664 | +1.9% | 35th | 1,908wk | -5.4% | -7.9% | 45% |
+| Wheat (HRW) | Grains | +2,327 | +0.7% | -7,474 | +1.9% | 33rd | 1,908wk | -5.4% | -10.7% | 51% |
+| Platinum | Metals | +13,162 | +18.7% | +189 | +3.9% | 27th | 1,907wk | -3.4% | -1.6% | 4% |
+| Feeder Cattle | Livestock | -487 | -0.8% | +730 | -1.1% | 22nd | 1,908wk | +0.7% | +0.2% | 53% |
+| Cocoa | Softs | -7,077 | -4.0% | +1,659 | -0.9% | 21st | 1,905wk | -1.1% | +3.8% | 75% |
+| Natural Gas | Energy | -241,272 | -14.1% | -7,694 | -1.8% | 18th | 1,804wk | -10.3% | -2.6% | 10% |
+| Palladium | Metals | -9,133 | -36.7% | -1,055 | +7.5% | 7th | 1,833wk | -5.5% | -15.6% | 0% |
+| Lean Hogs | Livestock | -76,730 | -26.3% | +5,057 | -1.7% | 1st | 1,908wk | -2.1% | -36.3% | 0% |
+| Class III Milk | Livestock | -11,495 | -32.8% | +1,610 | +0.7% | 0th | 1,480wk | +0.1% | -3.2% | 22% |
 
 ---
 
