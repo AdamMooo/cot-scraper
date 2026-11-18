@@ -1,4 +1,4 @@
-Last updated: 2026-08-27 | Status: FULLY LIVE — secrets set, HTML email confirmed sending from CI. Research program COMPLETE: five studies (levels, cross-section, MM flow, commercial flow, vol-vs-HAR), all nulls — no investable information in COT positioning, for returns or for vol. The report now carries the three uses the data does support: attribution, OI/fragility watch, structural context (see "Weekly automation" and research/APPLICATIONS.md)
+Last updated: 2026-11-18 | Status: FULLY LIVE — secrets set, HTML email confirmed sending from CI. Research program COMPLETE: five studies (levels, cross-section, MM flow, commercial flow, vol-vs-HAR), all nulls — no investable information in COT positioning, for returns or for vol. The report now carries the three uses the data does support: attribution, OI/fragility watch, structural context (see "Weekly automation" and research/APPLICATIONS.md). Since 2026-11-18 it leads with a "Your portfolio" section: TFF positioning in the markets that move the user's ETFs (VFV, XDIV, ZLB, VEE, VIU), with the link measured each run (see `portfolio.py`)
 
 ## Repo Card
 
@@ -90,6 +90,7 @@ files, same as the base kit's own design intent:
 | `mm_flow.py` | The test `managed_money.py` specified, run 2026-08-27: Managed Money flow ranked cross-sectionally, orthogonalised against the formation-week return, raced head-to-head against pure short-term reversal, with all of `cross_section.py`'s controls carried over (entry lag, point-in-time percentiles, IC, risk-parity legs, jackknife). **Verdict: flow has zero cross-sectional information** (IC +0.0002, p=0.99), and the no-CFTC reversal benchmark beats it decisively. This closed the research question. See "Managed Money" below and `research/MM-FLOW.md` |
 | `hedger_flow.py` | The KRT follow-up `research/APPLICATIONS.md` ranked #2: COMMERCIAL flow (legacy columns 11/12, verified against the 1986 and 2025 headers) through the same harness as `mm_flow.py`, targeting the one positioning premium that survives post-2004 replication (Kang-Rouwenhorst-Tang 2020's liquidity premium, Marechal 2023). **Verdict: null after a 1-week publication lag** -- +1.4%/yr p=0.71, IC -0.0008, orthogonalised +0.2%/yr p=0.96. Note the sign conventions differ from mm_flow (hedgers are contrarians; the effect would print POSITIVE spread/IC). Reversal itself is weaker on this longer 2005+ sample (+8.4%/yr, p=0.073) than on mm_flow's 2015+ (+20.6%) -- the reversal side-finding is sample-dependent too. `research/HEDGER-FLOW.md` |
 | `vol_forecast.py` | The follow-up ranked #1 (no published commodity version exists): does crowding forecast next week's realized vol incrementally to a HAR baseline (Corsi 2009; log RV on its 1wk/4wk/13wk history, RV from daily closes via `prices.daily_closes`, per-commodity OLS in pure Python)? **Verdict: primary null** -- partial corr -0.0013, pooled p=0.85, mean dR2 +0.002 against HAR's 0.223. The pre-specified SECONDARY (extremeness \|pct-50\|) prints +0.02 at p=0.004 but is economically negligible (~0.02 partial corr) and narrow (positive in 15/24, sign test p=0.31) -- **flagged, not promoted**; promoting it would need its own pre-specified test. Also documents that the cross-sectional vol tilt is a BETWEEN-commodity fact: within-commodity, crowding vs own-week vol is only +0.011. `research/VOL-FORECAST.md` |
+| `portfolio.py` | The "Your portfolio" lens, the email's first section. TFF report (asset managers vs leveraged funds, keyed on contract code col 3 so CFTC's Feb 2022 renames need no chain; cols 11/12 AM, 14/15 lev, verified against the header) for S&P 500, VIX, 2Y/10Y Treasuries, CAD, JPY, EUR, USD index, plus legacy crude/copper/gold. Which holdings each market reaches is MEASURED every run, not asserted: trailing-156-week OLS of each ETF's Tue-Tue return on the S&P plus that market, listed only at \|t\| >= 2. At build time: CAD is VFV's second driver (-0.91), 10Y reaches ZLB (+0.75) not XDIV, crude barely reaches anything (XDIV +0.06), natural gas reached nothing so it was dropped. TFF archive starts 2010-07-20 (~850 weeks, not 40 years) |
 | `roll_check.py` | Data-quality diagnostic for `prices.py`: bucket weekly \|return\| by day-of-month to find contract-roll gaps in Yahoo's non-roll-adjusted continuous series. Flags 3 of 24 (Class III Milk, Lean Hogs, Live Cattle). Standalone, no effect on the weekly job |
 
 ## Weekly automation
@@ -190,6 +191,22 @@ out to be "collect and analyze every week," not "hand someone an exe."
     starting to break). The `## Full data` table stays underneath for anyone
     who wants to check the underlying numbers, but it's no longer the point
     of the email
+- **Two categories, self-backfilling (2026-11-18).** `weekly_update.py` refreshes
+  Legacy and TFF, and merges CFTC's current-year archive zip
+  (`fund_data.current_year_archive_url`, kept current weekly by CFTC) into
+  the tracked file before the live snapshot, so a missed week or a newly
+  tracked category fills itself in. This backfilled legacy Jan-Aug 2026,
+  which the accumulator had never seen. It also deletes `.cot-cache/prices/`
+  at start: `prices._closes` never refetches a cached ticker, so any
+  actions/cache save that captured prices would freeze them. Bump the
+  workflow's cache key (now `cot-cache-v2`) whenever a category is added
+- **Yahoo weekly bars are dated Monday but carry Friday's close.** A
+  Tuesday as-of looked up in weekly bars returns the close three days
+  AFTER the positioning snapshot. Found 2026-11-18; the report's same-week
+  price now uses `daily_closes`. The research scripts used weekly bars, so
+  their "same-week" correlations (e.g. the +0.133 flow/return) compare
+  Tue-Tue flow with Fri-Fri price; their forward returns effectively start
+  at Friday publication, which is the realistic entry anyway
 - **`prices.py`** -- Yahoo Finance's public, unofficial, no-API-key chart
   endpoint (`query1.finance.yahoo.com/v8/finance/chart/<ticker>`), plain
   `requests` through the shared session, no new dependency. `daily_closes`

@@ -28,6 +28,7 @@ Public interface:
 
 import csv
 import json
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import date, timedelta
 from pathlib import Path
@@ -182,8 +183,15 @@ def _collect(by_market: MarketHistory) -> list[Reading]:
         has_prior = gap <= _MAX_PLAUSIBLE_GAP_DAYS
         change = net - prior_net if has_prior else None
 
+        # Same-week price from DAILY closes. Yahoo's weekly bars are dated the
+        # Monday that opens the week but carry that week's Friday close, so a
+        # Tuesday as-of date looked up in weekly bars returned the close three
+        # days AFTER the positioning snapshot: the flow read compared
+        # Tue-to-Tue positioning with Fri-to-Fri price. Trend and range keep
+        # weekly bars, where a 3-day offset on a 13/52-week window is noise.
         closes = prices.weekly_closes(commodity.ticker)
-        price_pct = prices.pct_change(closes, prior_date, as_of) if has_prior else None
+        price_pct = (prices.pct_change(prices.daily_closes(commodity.ticker), prior_date, as_of)
+                     if has_prior else None)
         trend_13w = prices.pct_change(closes, _days_back(as_of, 91), as_of)
         range_52w = _range_position(closes, as_of)
 
@@ -334,8 +342,12 @@ _SHORT_MECHANICS = ("At these levels the accelerant points up: a bounce can be a
                     "the footer describes; its speed is not.")
 
 
-def build_report(by_market: MarketHistory, title: str = "Legacy Report (Futures Only)") -> str:
-    """Short, readable, descriptive. Detail table last, caveat at the bottom."""
+def build_report(by_market: MarketHistory, lead: Callable[[list[Reading]], str] | None = None) -> str:
+    """Short, readable, descriptive. Detail table last, caveat at the bottom.
+
+    `lead` gets the commodity readings and returns a markdown section placed
+    straight after the headline (the portfolio lens, see portfolio.py).
+    """
     rows = _collect(by_market)
     if not rows:
         return "# COT Weekly\n\nNo commodities could be read from this week's file."
@@ -367,6 +379,8 @@ def build_report(by_market: MarketHistory, title: str = "Legacy Report (Futures 
             if read:
                 headline += f" -- {read}"
     lines += [headline + ".", ""]
+    if lead:
+        lines.append(lead(rows))
 
     # Until a second weekly snapshot accumulates, there is no prior week to
     # difference against and every change/price cell would read "n/a". Say

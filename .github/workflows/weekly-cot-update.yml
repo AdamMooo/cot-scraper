@@ -30,11 +30,13 @@ jobs:
       # (actions/cache only saves on a cache-key miss). Only the current
       # year is re-downloaded every run regardless of the cache -- see
       # downloader.py's skip-if-exists exception for extract=False entries.
+      # v2: adds the TFF history (portfolio section). Bump the key whenever a
+      # category is added, or its history is re-fetched every run.
       - name: Cache historical archives
         uses: actions/cache@v4
         with:
           path: .cot-cache
-          key: cot-cache-v1
+          key: cot-cache-v2
 
       - name: Run weekly update
         env:

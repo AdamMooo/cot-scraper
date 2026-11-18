@@ -22,6 +22,7 @@ Public interface:
     NotAFundPage                -- raised for an unrecognised category slug
     discover_build_id()         -> str  (fetches and caches the historical page)
     fetch_fund(build_id, slug)  -> dict (name, series, documents.fund)
+    current_year_archive_url(slug) -> str | None
 """
 
 import re
@@ -105,3 +106,15 @@ def fetch_fund(build_id: str, slug: str) -> dict:
     documents[str(date.today().year)] = {"url": BASE + current_path, "extract": False}
 
     return {"name": name, "series": {}, "documents": {"fund": documents}}
+
+
+def current_year_archive_url(slug: str) -> str | None:
+    """The current year's zip, which CFTC keeps up to date weekly alongside
+    the live file. The live file is one week's snapshot; this is the whole
+    year so far, so merging it backfills any week the accumulator missed
+    (a skipped run, or weeks before a category was first tracked)."""
+    if "historical" not in _cache:
+        discover_build_id()
+    prefix = _BY_SLUG[slug][2]
+    m = re.search(re.escape(prefix) + rf"_?{date.today().year}\.zip", _cache["historical"])
+    return BASE + m.group(0) if m else None

@@ -11,8 +11,9 @@ this script merges each week's snapshot into data/<category>/<year>.txt
 gives analysis.py a real week-over-week history for the current year until
 CFTC eventually posts it as a proper historical archive.
 
-v1 scope is one report category (see TARGET_SLUG below). See CLAUDE.md for
-why, and for how to add more categories to this script later.
+Two report categories: Legacy (the commodity section) and Traders in
+Financial Futures (the portfolio section, see portfolio.py). Each run also
+merges CFTC's current-year archive zip, so a missed week backfills itself.
 """
 
 import shutil
@@ -22,44 +23,58 @@ from pathlib import Path
 
 import analysis
 import downloader
+import fund_data
 import fund_index
 import notify
+import portfolio
 
 REPO_ROOT = Path(__file__).resolve().parent
 CACHE_ROOT = REPO_ROOT / ".cot-cache"
 DATA_ROOT = REPO_ROOT / "data"
 REPORTS_ROOT = REPO_ROOT / "reports"
 
-TARGET_SLUG = "legacy_futures_only"
+COMMODITY_SLUG = "legacy_futures_only"
+PORTFOLIO_SLUG = "tff_futures_only"
 
 
-def main() -> None:
-    entries = fund_index.get_fund_index(log=print)
-    target = next(e for e in entries if e["slug"] == TARGET_SLUG)
-
-    result = downloader.run_download([(target["name"], target["slug"])], CACHE_ROOT, log=print)
+def _refresh(entry: dict) -> Path:
+    """Download one category, accumulate its current year, return its cache folder."""
+    result = downloader.run_download([(entry["name"], entry["slug"])], CACHE_ROOT, log=print)
     print(result)
     if result.failed:
         raise RuntimeError(f"{len(result.failed)} document(s) failed to download: {result.failed}")
 
-    category_folder = downloader.safe_name(target["name"], fallback=downloader.safe_name(target["slug"], "fund"))
+    category_folder = downloader.safe_name(entry["name"], fallback=downloader.safe_name(entry["slug"], "fund"))
     category_dir = CACHE_ROOT / category_folder
-
     current_year_file = category_dir / f"{date.today().year}.txt"
     if not current_year_file.exists():
         raise RuntimeError(f"expected {current_year_file} after a successful download, but it's missing")
 
-    tracked_dir = DATA_ROOT / category_folder
-    tracked_dir.mkdir(parents=True, exist_ok=True)
-    tracked_file = tracked_dir / current_year_file.name
+    tracked_file = DATA_ROOT / category_folder / current_year_file.name
+    archive_url = fund_data.current_year_archive_url(entry["slug"])
+    archive_file = category_dir / "current-year-archive.tmp"  # not *.txt, so never loaded twice
+    if archive_url and downloader._download_and_extract_zip(archive_url, archive_file, print):
+        analysis.merge_current_year_snapshot(archive_file, tracked_file)
+        archive_file.unlink()
     analysis.merge_current_year_snapshot(current_year_file, tracked_file)
     # Sync the merged (accumulated) file back over the cache's copy so the
     # analysis below sees the full current-year history, not just this
     # week's single-row snapshot that run_download just wrote there.
     shutil.copy2(tracked_file, current_year_file)
+    return category_dir
 
-    by_market = analysis.load_category_rows(category_dir)
-    report_md = analysis.build_report(by_market, title=target["name"])
+
+def main() -> None:
+    # prices.py never refetches a ticker it has on disk, and .cot-cache/ is
+    # restored by actions/cache, so a cached price file would freeze every
+    # week's prices at whatever the run that saved the cache saw.
+    shutil.rmtree(CACHE_ROOT / "prices", ignore_errors=True)
+    entries = {e["slug"]: e for e in fund_index.get_fund_index(log=print)}
+    commodity_dir = _refresh(entries[COMMODITY_SLUG])
+    tff = portfolio.load_tff(_refresh(entries[PORTFOLIO_SLUG]))
+
+    report_md = analysis.build_report(analysis.load_category_rows(commodity_dir),
+                                      lead=lambda rows: portfolio.build_section(tff, rows))
 
     REPORTS_ROOT.mkdir(exist_ok=True)
     today = date.today().isoformat()

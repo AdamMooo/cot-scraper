@@ -54,7 +54,9 @@ document keys are just year strings, and those already read fine as-is.
 
 `weekly_update.py` + `.github/workflows/weekly-cot-update.yml` run this unattended
 every Friday via GitHub Actions: download the current year's Legacy (Futures Only)
-report, extend the historical cache, compute positioning highlights (`analysis.py`),
+and Traders in Financial Futures reports, extend the historical cache, compute
+positioning highlights (`analysis.py`) led by a "Your portfolio" section for the
+VFV/XDIV/ZLB/VEE/VIU holdings (`portfolio.py`; edit `HOLDINGS` there if they change),
 commit the updated current-year file and the new report to the repo, and email the
 report (`notify.py`, Gmail SMTP). See `CLAUDE.md` for the analysis scope and the
 non-commodity exclusion list, and `weekly_update.py`'s own docstring for the
